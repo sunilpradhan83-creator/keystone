@@ -1573,13 +1573,370 @@ public class PaymentEventConsumer {
     has_code: false,
     tags: ["back-pressure", "kafka", "consumer-lag",
            "messaging", "scalability", "reactive"]
-  }
-  
+  },
+
   // ══════════════════════════════════════════
   // SUBSECTION 4.4 — INTEGRATION PATTERNS
-  // Coming in Batch 4
   // ══════════════════════════════════════════
 
+  {
+    id: "4.4.01",
+    section: 4,
+    subsection: "4.4",
+    level: "intermediate",
+    question: "What is the Backend for Frontend (BFF) pattern? When should you use it?",
+    quick_answer: "→ BFF: dedicated API backend per client type (mobile BFF, web BFF, partner BFF)\n→ Each BFF tailored to its client's exact data needs — eliminates over/under-fetching\n→ Mobile BFF: fewer fields, smaller payloads, optimised for bandwidth\n→ Web BFF: richer data, more aggregation, desktop-optimised\n→ BFF owns: data aggregation, transformation, auth delegation, caching per client\n→ Use when: mobile and web have significantly different data requirements",
+    detailed_answer: "The BFF pattern creates a dedicated backend service for each type of frontend client. Rather than one generic API serving all clients, each client gets an API shaped exactly for its needs.\n\nWhy it matters:\nA generic API must satisfy the most demanding client — which means simpler clients over-fetch (receive unnecessary data) or under-fetch (need multiple calls). Mobile clients are bandwidth-constrained. Desktop clients can handle richer payloads. Partner integrations need different auth and rate limits.\n\nBFF responsibilities:\n→ Data aggregation: call multiple downstream microservices, combine results\n→ Data transformation: reshape data to match client's exact model\n→ Protocol translation: REST for web, GraphQL for flexible mobile queries\n→ Authentication delegation: validate client token, call services with service identity\n→ Caching: cache per client use case, not generic caching\n→ Rate limiting: different limits per client type\n\nBFF vs API Gateway:\n→ API Gateway: routing, auth, rate limiting — infrastructure concerns, no business logic\n→ BFF: data aggregation, transformation — client-specific business logic\n→ They work together: API Gateway in front of multiple BFFs\n\nWhen to use BFF:\n→ Mobile and web have significantly different data shapes\n→ Different auth requirements per client type\n→ Partner integrations need isolated rate limits and contracts\n→ Teams are organised around client types (mobile team owns mobile BFF)\n\nWhen NOT to use:\n→ Single client type — unnecessary complexity\n→ Small team — operational overhead of multiple backends",
+    key_points: [
+      "BFF: dedicated backend per client type — mobile, web, partner",
+      "Each BFF shaped for its client's exact data needs",
+      "BFF aggregates multiple microservices — one call from client instead of many",
+      "BFF vs API Gateway: BFF has business logic, Gateway has infrastructure concerns",
+      "Teams own their BFF: mobile team → mobile BFF",
+      "Use when clients have significantly different data requirements"
+    ],
+    hint: "Mobile app needs user profile with 3 fields. Web app needs user profile with 20 fields plus recent orders plus recommendations. One generic API must return all 20 fields + orders + recommendations to both. Mobile wastes bandwidth. What is the solution?",
+    common_trap: "Building one BFF for all clients. A BFF shared by mobile, web, and partners becomes a new monolith with conflicting requirements. One BFF per client type — or the pattern loses its value.",
+    follow_up_questions: [
+      {
+        text: "How does BFF relate to GraphQL?",
+        type: "inline",
+        mini_answer: "GraphQL is sometimes used instead of BFF — clients specify exactly what data they need, eliminating over-fetching without separate backends. But GraphQL BFF is also valid: a GraphQL server acts as the BFF, aggregating microservices behind a typed schema. GraphQL solves the data shape problem. BFF also solves: auth delegation, client-specific caching, rate limiting, protocol differences. They complement each other."
+      },
+      {
+        text: "How do you handle authentication in a BFF architecture?",
+        type: "inline",
+        mini_answer: "Client authenticates with Identity Provider → gets JWT. Client sends JWT to BFF. BFF validates JWT (signature + expiry + claims). BFF calls downstream microservices using its own service identity (machine-to-machine token). Downstream services trust BFF — they do not validate the original client token. BFF is the trust boundary. This prevents microservices from needing to understand every client's auth model."
+      }
+    ],
+    related: ["4.1.10", "7.1.01", "1.4.01"],
+    has_diagram: true,
+    diagram: `BACKEND FOR FRONTEND PATTERN
+
+Mobile App          Web App          Partner API
+    │                   │                │
+    │                   │                │
+    ▼                   ▼                ▼
+┌─────────┐      ┌──────────┐     ┌──────────┐
+│ Mobile  │      │  Web     │     │ Partner  │
+│  BFF    │      │  BFF     │     │  BFF     │
+│         │      │          │     │          │
+│ small   │      │ rich     │     │ filtered │
+│ payload │      │ payload  │     │ payload  │
+└────┬────┘      └────┬─────┘     └────┬─────┘
+     │                │                │
+     └────────────────┼────────────────┘
+                      │
+           ┌──────────┼──────────┐
+           ▼          ▼          ▼
+      ┌─────────┐ ┌───────┐ ┌───────┐
+      │  User   │ │ Order │ │ Prod  │
+      │ Service │ │  Svc  │ │  Svc  │
+      └─────────┘ └───────┘ └───────┘`,
+    has_code: false,
+    tags: ["BFF", "backend-for-frontend", "API",
+           "microservices", "mobile", "aggregation"]
+  },
+
+  {
+    id: "4.4.02",
+    section: 4,
+    subsection: "4.4",
+    level: "intermediate",
+    question: "What is the Anti-Corruption Layer (ACL) pattern? When is it essential?",
+    quick_answer: "→ ACL: translation layer between two bounded contexts with different domain models\n→ Prevents external model's concepts from polluting your clean domain model\n→ Translates: terminology, data structures, business rules between systems\n→ Essential when: integrating legacy systems, third-party APIs, or different bounded contexts\n→ ACL is owned by the downstream (consumer) — not the upstream\n→ Without ACL: legacy model concepts leak into your clean domain — technical debt accumulates",
+    detailed_answer: "The Anti-Corruption Layer is a defensive translation boundary. Without it, integrating with a legacy system or third-party API causes that system's concepts, terminology, and data structures to leak into your clean domain model.\n\nWhy it matters:\nLegacy systems often have poor domain models — inconsistent naming, mixed concerns, historical quirks. If you map directly from their model to your model, you inherit their problems.\n\nACL responsibilities:\n→ Translate terminology: their 'customer_no' → your 'userId'\n→ Transform data structures: their nested XML → your flat domain object\n→ Enforce invariants: validate their data meets your domain rules\n→ Isolate volatility: when their API changes, only ACL changes — your domain stays clean\n→ Handle protocol differences: SOAP → REST, XML → JSON\n\nACL placement:\n→ Owned by the consumer (you), not the provider\n→ Lives at the boundary of your bounded context\n→ Part of your codebase — the provider does not know it exists\n\nWhen essential:\n→ Integrating legacy monolith during Strangler Fig migration\n→ Third-party payment gateway (Stripe, PayPal) — their model ≠ your model\n→ Different bounded contexts with different ubiquitous languages\n→ Any integration where the external model is messy or volatile\n\nWhen you can skip it:\n→ Two contexts share the same domain model (rare)\n→ External system is simple and stable (unlikely)\n→ Conformist relationship: you intentionally adopt their model (shared kernel)",
+    key_points: [
+      "ACL: translates between external model and your clean domain model",
+      "Owned by consumer — provider does not know it exists",
+      "Prevents external system's concepts polluting your domain",
+      "When external API changes: only ACL changes, domain stays clean",
+      "Essential for: legacy integration, third-party APIs, Strangler Fig migration",
+      "Without ACL: technical debt accumulates as external concepts leak in"
+    ],
+    hint: "You integrate with a legacy system that calls customers 'account_holders' with a 'master_id'. Your domain uses 'Customer' with 'customerId'. Without ACL, 'account_holder' and 'master_id' leak into your code. In 2 years, nobody knows which is correct.",
+    common_trap: "Letting the ACL grow into a fat service with business logic. ACL should translate only — no business decisions. Business logic belongs in the domain. ACL that accumulates business logic becomes a bottleneck and a maintenance problem.",
+    follow_up_questions: [
+      {
+        text: "How does ACL relate to the Strangler Fig pattern?",
+        type: "linked",
+        links_to: "4.1.04"
+      },
+      {
+        text: "What is the difference between ACL and an Adapter pattern?",
+        type: "inline",
+        mini_answer: "Adapter (GoF): converts an interface into another interface the client expects — structural, code-level. ACL (DDD): translates between entire domain models — conceptual, cross-context. An Adapter handles one method signature mismatch. An ACL handles the entire vocabulary, data structure, and semantic differences between two bounded contexts. ACL often uses Adapters internally as part of its implementation."
+      }
+    ],
+    related: ["4.1.04", "4.4.03", "1.7.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["ACL", "anti-corruption-layer", "DDD",
+           "integration", "bounded-context", "legacy"]
+  },
+
+  {
+    id: "4.4.03",
+    section: 4,
+    subsection: "4.4",
+    level: "intermediate",
+    question: "What is the Adapter pattern? How does it differ from Facade and how are both used in integration?",
+    quick_answer: "→ Adapter: converts one interface to another — makes incompatible interfaces work together\n→ Facade: simplifies a complex subsystem behind a simple unified interface\n→ Adapter: structural fix — 'this interface needs to look like that interface'\n→ Facade: simplification — 'these 5 complex calls become 1 simple call'\n→ Integration use: Adapter wraps third-party client to match your interface; Facade hides complexity of multiple service calls\n→ Both reduce coupling to external systems",
+    detailed_answer: "Both patterns deal with interface complexity but solve different problems.\n\nAdapter Pattern:\nConverts the interface of a class into another interface that clients expect. Classic example: you have a payment processor with interface A (Stripe SDK), your code expects interface B (your PaymentGateway interface). An Adapter wraps Stripe and makes it look like PaymentGateway.\n\nUse cases:\n→ Wrapping third-party libraries behind your own interface\n→ Making legacy code work with new code\n→ Allowing unit testing by injecting mock adapters\n→ Switching providers: swap StripeAdapter for PaypalAdapter without changing business logic\n\nFacade Pattern:\nProvides a simplified interface to a complex subsystem. Example: checkout process requires calling inventory service, payment service, shipping service, notification service. A CheckoutFacade exposes one placeOrder() method that orchestrates all four calls internally.\n\nUse cases:\n→ Simplifying complex multi-step operations for callers\n→ Hiding internal subsystem complexity\n→ Providing a stable API over a volatile implementation\n→ Reducing the learning curve for new developers using a subsystem\n\nKey difference:\n→ Adapter: makes two incompatible interfaces compatible — interface translation\n→ Facade: simplifies complexity — hides multiple calls behind one\n→ Adapter does not simplify, just translates\n→ Facade does not translate interfaces, just reduces complexity\n\nUsed together:\nA checkout facade may internally use payment adapters, shipping adapters, and notification adapters — each wrapping a different external service.",
+    key_points: [
+      "Adapter: interface translation — makes incompatible interfaces compatible",
+      "Facade: simplification — hides multiple calls behind one simple interface",
+      "Adapter: structural fix for interface mismatch",
+      "Facade: complexity reduction for callers",
+      "Adapter enables provider switching without changing business logic",
+      "They complement each other: Facade uses multiple Adapters internally"
+    ],
+    hint: "You switch payment providers from Stripe to PayPal. With an Adapter wrapping each provider: you swap StripeAdapter for PayPalAdapter — business logic unchanged. Without Adapter: you change every place in your code that calls Stripe directly.",
+    common_trap: "Using Facade when you need Adapter. If the problem is interface incompatibility, a Facade does not help — it simplifies but does not translate. If the problem is complexity, an Adapter does not help — it translates but does not simplify.",
+    follow_up_questions: [
+      {
+        text: "How does the Adapter pattern enable unit testing of external integrations?",
+        type: "inline",
+        mini_answer: "Define your own PaymentGateway interface. StripeAdapter implements PaymentGateway by calling Stripe SDK. In production: inject StripeAdapter. In tests: inject MockPaymentGateway (also implements PaymentGateway). Business logic never knows about Stripe — it only knows PaymentGateway. Tests run without network calls. Provider can be swapped without touching business logic. This is the Dependency Inversion Principle in action."
+      }
+    ],
+    related: ["4.4.02", "4.4.01"],
+    has_diagram: false,
+    has_code: true,
+    code_language: "java",
+    code_snippet: `// Adapter Pattern — Payment Provider
+// Your interface
+public interface PaymentGateway {
+    PaymentResult charge(Money amount, String token);
+    void refund(String transactionId);
+}
+
+// Adapter wraps Stripe SDK
+@Component
+public class StripeAdapter implements PaymentGateway {
+
+    @Autowired private StripeClient stripe; // third-party
+
+    @Override
+    public PaymentResult charge(Money amount,
+            String token) {
+        // Translate YOUR model → Stripe model
+        ChargeCreateParams params = ChargeCreateParams
+            .builder()
+            .setAmount(amount.getCents())   // their format
+            .setCurrency(amount.getCurrency().toLowerCase())
+            .setSource(token)
+            .build();
+        Charge charge = stripe.charges().create(params);
+
+        // Translate Stripe response → YOUR model
+        return PaymentResult.of(charge.getId(),
+            charge.getStatus().equals("succeeded"));
+    }
+}
+// Swap to PayPal: just inject PayPalAdapter
+// Business logic unchanged`,
+    tags: ["adapter", "facade", "integration",
+           "patterns", "GoF", "interface"]
+  },
+
+  {
+    id: "4.4.04",
+    section: 4,
+    subsection: "4.4",
+    level: "advanced",
+    question: "What is the Strangler Fig pattern at the integration level? How do you use it to replace a third-party system?",
+    quick_answer: "→ Same principle as service migration: route traffic gradually from old system to new\n→ Integration ACL + feature flags: direct specific requests to new system, others to old\n→ Phase 1: run both systems in parallel, compare outputs (shadow mode)\n→ Phase 2: route non-critical traffic to new system (1% → 10% → 100%)\n→ Phase 3: decommission old system once new is fully validated\n→ Key: never do a big-bang switch — always have rollback path",
+    detailed_answer: "Replacing a third-party system (payment gateway, CRM, ERP) carries the same risks as migrating a monolith. The Strangler Fig approach applies identically.\n\nPhase 1 — Shadow Mode:\n→ All requests go to old system (live traffic)\n→ Same requests also sent to new system (shadow — response discarded)\n→ Compare outputs: does new system produce same results?\n→ Build confidence without any user impact\n→ Duration: days to weeks depending on traffic volume\n\nPhase 2 — Gradual Migration:\n→ Feature flag controls % routed to new system\n→ Start with low-risk, non-financial operations\n→ Monitor: error rates, latency, business metrics\n→ Increase % as confidence grows\n→ Rollback = flip feature flag back to 0%\n\nPhase 3 — Decommission:\n→ 100% traffic on new system\n→ Old system in read-only mode (safety net)\n→ Final validation: data consistency check\n→ Decommission old system\n\nACL role:\n→ ACL sits between your code and both systems\n→ ACL decides which system handles each request based on feature flag\n→ Your business logic never knows which system is active\n→ Makes rollback trivial — one config change\n\nRisks to manage:\n→ Data consistency: both systems must be kept in sync during transition\n→ Stateful operations: a payment started in old system must complete in old system\n→ Audit trail: ensure new system captures same compliance data",
+    key_points: [
+      "Shadow mode: route to both systems, compare outputs — zero user impact",
+      "Gradual migration: feature flag controls traffic split — easy rollback",
+      "ACL handles routing decision — business logic stays unchanged",
+      "Start with non-critical, non-financial operations first",
+      "Rollback = flip feature flag — always maintain this path",
+      "Data consistency check before decommissioning old system"
+    ],
+    hint: "You are replacing your payment gateway from PayPal to Stripe. You cannot test in production with real money at scale. Shadow mode lets you send the same payment requests to both systems and compare responses before any real traffic switches.",
+    common_trap: "Doing a big-bang switch on a deadline. Migrating a critical third-party system (payment gateway, ERP) all at once with no rollback path. One issue and you are down until you can switch back — which now requires an emergency deployment.",
+    follow_up_questions: [
+      {
+        text: "What is the Strangler Fig pattern for service migration?",
+        type: "linked",
+        links_to: "4.1.04"
+      }
+    ],
+    related: ["4.1.04", "4.4.02", "6.4.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["strangler-fig", "integration", "migration",
+           "shadow-mode", "feature-flags", "third-party"]
+  },
+
+  {
+    id: "4.4.05",
+    section: 4,
+    subsection: "4.4",
+    level: "intermediate",
+    question: "What is the Gateway Aggregation pattern? How does it reduce client chattiness?",
+    quick_answer: "→ Gateway Aggregation: API Gateway or BFF combines multiple downstream calls into one client request\n→ Problem: client makes 5 calls to 5 services — 5× network roundtrips, 5× latency\n→ Solution: gateway makes 5 calls internally (fast internal network) returns 1 response\n→ Reduces: client latency, mobile battery usage, number of connections\n→ Gateway calls services in parallel where possible — total latency = slowest service\n→ Different from BFF: aggregation is a specific technique; BFF is the broader pattern",
+    detailed_answer: "Client chattiness is when a client must make multiple sequential or parallel calls to assemble a complete view. On mobile, each additional network call costs battery, bandwidth, and latency.\n\nWithout aggregation:\n→ Client calls User Service: 80ms\n→ Client calls Order Service: 120ms\n→ Client calls Recommendation Service: 90ms\n→ Total: 290ms (sequential) or 120ms (parallel) + 3× mobile network overhead\n\nWith gateway aggregation:\n→ Client calls Gateway: 1 request\n→ Gateway calls all 3 in parallel (fast internal LAN): 120ms\n→ Gateway combines responses: 10ms\n→ Client receives 1 response: 130ms total\n→ Client saved: 2 network roundtrips, connection overhead, battery\n\nImplementation:\n→ Gateway receives request with aggregation context\n→ Identifies which downstream services needed\n→ Calls them in parallel (CompletableFuture, WebFlux, goroutines)\n→ Waits for all (or timeout + partial response)\n→ Transforms and merges responses\n→ Returns unified response\n\nPartial response handling:\n→ If one service fails: return partial response with error field for that section\n→ Never fail the whole response because one optional section failed\n→ Mark missing sections clearly in response schema\n\nAggregation vs orchestration:\n→ Aggregation: read-only combining of data for display\n→ Orchestration (Saga): coordinated writes with consistency requirements\n→ Use aggregation for GET (queries); Saga for POST/PUT (commands)",
+    key_points: [
+      "Aggregation: one client request → gateway makes N downstream calls → one response",
+      "Call downstream services in parallel — total latency = slowest service",
+      "Reduces: client latency, battery, bandwidth, connection overhead",
+      "Partial response: return what you have when one service fails",
+      "Aggregation for read (queries); Saga for write (coordinated commands)",
+      "Gateway owns aggregation logic — clients stay simple"
+    ],
+    hint: "A mobile dashboard needs data from 5 services. Sequential calls: 500ms total. Parallel calls from mobile: 120ms + 4× network overhead. Gateway aggregation (parallel, internal network): 120ms + 1× network overhead. Which is better on 4G?",
+    common_trap: "Calling downstream services sequentially in the gateway instead of in parallel. Sequential aggregation: total latency = sum of all services. Parallel aggregation: total latency = slowest service. For a dashboard with 5 services, the difference can be 5×.",
+    follow_up_questions: [
+      {
+        text: "How do you handle timeouts in a gateway aggregation call?",
+        type: "inline",
+        mini_answer: "Set a global timeout for the aggregated response (e.g. 3s). Per-service timeouts within that (e.g. 1s each). On individual service timeout: include partial response with null/error for that section — do not fail the whole response. Client receives everything that succeeded within timeout. Mark timed-out sections with a timeout indicator. Log the timeout for monitoring."
+      }
+    ],
+    related: ["4.4.01", "4.1.10", "1.4.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["gateway-aggregation", "BFF", "API-gateway",
+           "performance", "mobile", "patterns"]
+  },
+
+  {
+    id: "4.4.06",
+    section: 4,
+    subsection: "4.4",
+    level: "advanced",
+    question: "What is the Strangler Fig + feature flag strategy for zero-downtime legacy replacement?",
+    quick_answer: "→ Feature flags control which code path handles each request — old system or new\n→ Dark launch: deploy new code, feature flag off — zero traffic, validate in prod env\n→ Canary: flag on for 1% — real traffic, monitor for errors\n→ Progressive rollout: 1% → 5% → 25% → 100% with validation gates between\n→ Instant rollback: flip flag to 0% — no deployment needed\n→ Decouple deployment (code goes to prod) from release (users see it)",
+    detailed_answer: "Feature flags (also called feature toggles) combined with Strangler Fig give you the safest possible migration strategy for legacy replacement.\n\nKey principle:\nDeployment ≠ Release\n→ Deployment: new code is in production but inactive (flag off)\n→ Release: new code is serving real traffic (flag on)\nThis decoupling eliminates the risk of each deployment.\n\nPhases:\n\nDark Launch:\n→ Deploy new code to production\n→ Feature flag: 0% (no real traffic)\n→ Test with synthetic requests or internal users\n→ Validates: new code runs correctly in production environment\n→ No user impact if it fails\n\nCanary Release:\n→ Flag: 1-5% of real traffic to new code path\n→ Monitor: error rate, latency, business metrics\n→ Compare: new vs old system metrics side by side\n→ If metrics good: proceed. If bad: flag back to 0%\n\nProgressive Rollout:\n→ 1% → 5% → 25% → 50% → 100%\n→ Validation gate at each step\n→ Automated canary analysis: if error rate increases → auto-rollback\n→ Duration per step: depends on traffic volume and risk tolerance\n\nRollback:\n→ Flip flag to 0% — takes seconds\n→ No deployment required\n→ No database rollback needed (if data is backward compatible)\n→ Fastest possible rollback path\n\nFlag targeting:\n→ By user ID: internal users get new system first\n→ By geography: roll out to one region first\n→ By customer segment: beta users, then paying users, then all",
+    key_points: [
+      "Decouple deployment from release — code in prod ≠ users see it",
+      "Dark launch: new code deployed but flag off — validate in prod environment",
+      "Canary: 1% real traffic — real validation with real users",
+      "Progressive rollout: gates between each step with validation",
+      "Instant rollback: flip flag to 0% — no deployment, no DB rollback",
+      "Flag targeting: internal users → beta → all users"
+    ],
+    hint: "You deployed the new payment system. 30 minutes into 50% rollout, error rate spikes to 5%. With feature flags: flip to 0% in seconds, investigate. Without feature flags: emergency rollback deployment — 20 minutes minimum. Which would you rather have at 2am?",
+    common_trap: "Keeping feature flags in code forever. Flags that are never cleaned up become dead code that confuses developers. Set a removal date for every flag at creation. Once rollout is complete and stable, remove the flag and the old code path.",
+    follow_up_questions: [
+      {
+        text: "What tooling exists for feature flag management?",
+        type: "inline",
+        mini_answer: "Managed services: LaunchDarkly (most feature-rich, expensive), Unleash (open source, self-hosted), Flagsmith, Split.io. AWS: CloudWatch Evidently for A/B testing + flags. Simple homegrown: flags stored in Redis or a config table — checked on each request. For simple on/off: environment variables work. For complex targeting (% rollout, user segments): use a dedicated service. Always: flag state must update without deployment."
+      }
+    ],
+    related: ["4.4.04", "6.4.01", "4.1.04"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["feature-flags", "strangler-fig", "deployment",
+           "canary", "zero-downtime", "migration"]
+  },
+
+  {
+    id: "4.4.07",
+    section: 4,
+    subsection: "4.4",
+    level: "intermediate",
+    question: "What is the Retry Pattern with idempotency keys for third-party API integration?",
+    quick_answer: "→ Third-party APIs (Stripe, Twilio, SendGrid) fail transiently — must retry safely\n→ Without idempotency key: retry charges card twice, sends email twice\n→ With idempotency key: provider deduplicates — same key = same result returned\n→ Generate key per logical operation (UUID), send as header on every attempt\n→ Key format: operation-type + business-id (e.g. charge-order-123)\n→ Provider caches result for 24h — identical request within 24h returns cached result",
+    detailed_answer: "Third-party API integrations require careful retry design. These APIs are external, have rate limits, and charge money or send messages — retrying blindly causes real-world consequences.\n\nThe problem:\n→ You call Stripe to charge a card\n→ Stripe charges the card successfully\n→ Network fails before Stripe's 200 response reaches you\n→ Your code sees a timeout, retries\n→ Stripe charges the card again\n→ Customer is double-charged\n\nIdempotency key solution:\n→ You generate a UUID for this charge attempt: charge-order-123\n→ You send: POST /charges with header Idempotency-Key: charge-order-123\n→ Stripe charges card, stores result against key\n→ Network fails, you retry with same key\n→ Stripe sees key already exists, returns cached result\n→ No second charge\n\nKey design:\n→ Unique per logical operation (not per HTTP request)\n→ Human-readable helps debugging: charge-{orderId}-{timestamp}\n→ Stable across retries: must be the same UUID on all retry attempts\n→ Scoped to operation type: charge key ≠ refund key for same order\n\nExpiry:\n→ Stripe caches idempotency results for 24 hours\n→ After 24h: same key treated as new request\n→ Store your keys with same TTL for consistency\n\nNot all providers support idempotency keys:\n→ Check provider docs\n→ If not supported: implement deduplication in your own code\n→ Check before creating: does a successful result already exist in your DB?",
+    key_points: [
+      "Idempotency key: provider deduplicates retries — same key = same result",
+      "Generate per logical operation (UUID), not per HTTP request",
+      "Send on every attempt — provider returns cached result if already seen",
+      "Key must be stable across all retries for same operation",
+      "24h typical TTL — store your keys with matching expiry",
+      "If provider lacks key support: pre-check in your DB before calling"
+    ],
+    hint: "Twilio sends an SMS for each POST /messages call. You retry on timeout. Without idempotency: customer gets 3 identical SMS messages from your retry logic. With idempotency key: Twilio detects duplicate and returns the original send result.",
+    common_trap: "Generating a new idempotency key on each retry attempt. This defeats the entire purpose — each retry looks like a new operation to the provider. Generate the key once before the first attempt and reuse it for all retries.",
+    follow_up_questions: [
+      {
+        text: "How do you implement idempotency when the third-party provider does not support keys?",
+        type: "inline",
+        mini_answer: "Pre-check pattern: before calling the provider, check your own DB for an existing successful result for this operation (order_id + operation_type). If found: return cached result, skip provider call. If not found: call provider, store result in DB, return result. This is your own idempotency layer in front of a non-idempotent provider. Requires the provider response to be deterministic enough to cache."
+      }
+    ],
+    related: ["4.2.10", "4.2.02", "7.3.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["idempotency", "retry", "third-party",
+           "stripe", "integration", "API"]
+  },
+
+  {
+    id: "4.4.08",
+    section: 4,
+    subsection: "4.4",
+    level: "advanced",
+    question: "What is the Claim Check pattern? When do you use it for large message payloads?",
+    quick_answer: "→ Claim Check: store large payload in external storage, send only a reference (claim check) in the message\n→ Problem: Kafka messages >1MB cause performance degradation; SQS limit is 256KB\n→ Solution: upload payload to S3/blob store → publish message with S3 URL → consumer downloads\n→ Reduces: broker storage, network traffic, consumer memory pressure\n→ Use when: messages regularly exceed broker limits or contain binary data\n→ Trade-off: extra network hop to fetch payload, S3 storage cost, lifecycle management",
+    detailed_answer: "Message brokers are optimised for many small messages, not large payloads. Kafka starts degrading with messages above 1MB. SQS hard limit is 256KB. The Claim Check pattern externalises large payloads.\n\nHow it works:\n1. Producer has large payload (e.g. 10MB PDF, large JSON)\n2. Producer uploads payload to S3 (or Azure Blob, GCS)\n3. Producer publishes small message to Kafka/SQS with S3 URL (the 'claim check')\n4. Consumer reads small message from broker\n5. Consumer downloads full payload from S3 using the URL\n6. Consumer processes payload\n7. Consumer deletes or archives payload from S3 after processing\n\nPayload storage options:\n→ S3 (AWS): most common, cost-effective, lifecycle policies\n→ Azure Blob Storage / GCS: same pattern\n→ Redis: for temporary payloads with TTL\n→ Database: only if payload needs to be queryable\n\nMessage schema with claim check:\n→ event_id: UUID\n→ event_type: OrderDocumentGenerated\n→ payload_url: s3://bucket/path/to/payload.json\n→ payload_size: 10485760 (bytes)\n→ payload_checksum: sha256 hash (consumer validates integrity)\n→ expires_at: timestamp (when S3 object will be deleted)\n\nLifecycle management:\n→ S3 lifecycle policy: auto-delete after retention period\n→ Or consumer deletes after processing\n→ Checksum validates payload was not corrupted in S3\n\nWhen to use:\n→ Payload regularly > 256KB\n→ Binary data (PDFs, images, videos)\n→ Payloads that multiple consumers may want to access",
+    key_points: [
+      "Claim Check: upload payload to S3, send only reference in message",
+      "Kafka degrades above 1MB; SQS hard limit is 256KB",
+      "Consumer downloads full payload from S3 using the reference",
+      "Include checksum in message — consumer validates payload integrity",
+      "S3 lifecycle policy handles cleanup — avoid orphaned payloads",
+      "Use when: regularly exceed broker limits or binary data involved"
+    ],
+    hint: "Your order service generates PDF invoices (avg 5MB) and wants to publish them to Kafka for the invoice service to process. Kafka message limit is 1MB. What is the solution?",
+    common_trap: "Storing claim check payloads in S3 indefinitely without a lifecycle policy. Over time you accumulate gigabytes of orphaned payloads that were never cleaned up — S3 costs grow silently. Always define retention at creation time.",
+    follow_up_questions: [
+      {
+        text: "How do you handle a claim check payload that has been deleted before the consumer processes it?",
+        type: "inline",
+        mini_answer: "Consumer attempts to download from S3 → gets 404 (NoSuchKey). Options: 1) Dead-letter the message — payload is gone, cannot process. 2) Check if payload can be regenerated — re-trigger producer. 3) Alert and investigate — was retention too short? Prevention: set payload expiry > message broker retention period. If Kafka retains messages 7 days, S3 payload must live at least 7 days. Add buffer: S3 TTL = broker retention × 2."
+      }
+    ],
+    related: ["4.3.01", "4.3.02"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["claim-check", "messaging", "S3",
+           "large-payload", "kafka", "SQS", "patterns"]
+  },
+
+  {
+    id: "4.4.09",
+    section: 4,
+    subsection: "4.4",
+    level: "intermediate",
+    question: "What is the Choreography vs Orchestration trade-off in integration patterns?",
+    quick_answer: "→ Choreography: services react to events independently — no central controller\n→ Orchestration: central coordinator (Saga orchestrator, process manager) directs each step\n→ Choreography: loose coupling, hard to visualise full flow, emergent behaviour\n→ Orchestration: tight coupling to coordinator, explicit flow, easy to monitor and debug\n→ Hybrid: choreography for simple fan-out, orchestration for multi-step transactions\n→ Rule: if you cannot draw the full flow from one place, you need orchestration",
+    detailed_answer: "This is one of the most important architectural decisions in event-driven systems.\n\nChoreography:\n→ Each service knows what events to listen to and what events to publish\n→ No central controller — services choreograph themselves\n→ Example: OrderCreated → InventoryService reserves stock → StockReserved → InvoiceService creates invoice → InvoiceCreated → NotificationService sends email\n→ Pros: loose coupling, each service independently deployable, simple for individual services\n→ Cons: system behaviour is emergent — cannot understand full flow without reading all services, hard to debug, circular dependency risk, hard to add steps\n\nOrchestration:\n→ Central orchestrator explicitly commands each participant in sequence\n→ Orchestrator knows the full flow and handles failures\n→ Example: OrderSaga tells InventoryService to reserve, waits, tells InvoiceService to create, waits, tells NotificationService to send\n→ Pros: full flow visible in one place, easy to monitor, handles complex branching and rollback\n→ Cons: orchestrator is a new point of coupling, can become a bottleneck\n\nHybrid approach (most real systems):\n→ Orchestration for: multi-step transactions requiring consistency (Saga pattern)\n→ Choreography for: pure event fan-out where services are truly independent\n→ Example: OrderPlaced (orchestrated Saga for payment+inventory) → OrderConfirmed event (choreography for notification, analytics, loyalty)\n\nDecision signals:\n→ Use orchestration when: failure of any step requires rollback of previous steps\n→ Use choreography when: each consumer is truly independent, failure of one does not affect others\n→ If you cannot explain the full business process from one file/class: add orchestration",
+    key_points: [
+      "Choreography: emergent behaviour, loose coupling, hard to debug at scale",
+      "Orchestration: explicit flow, visible in one place, easy to monitor",
+      "Choreography for: independent fan-out reactions",
+      "Orchestration for: coordinated multi-step transactions (Saga)",
+      "Hybrid: orchestrate the transaction, choreograph the downstream reactions",
+      "If you cannot draw the full flow from one place: add orchestration"
+    ],
+    hint: "After 2 years of choreography, a new developer joins. They need to understand the order fulfilment flow. They read OrderService, InventoryService, InvoiceService, ShippingService, NotificationService. Each service triggers the next via events. How long does it take to understand the full flow?",
+    common_trap: "Starting with choreography because it is simpler to implement and discovering 2 years later that nobody can understand the full system behaviour. Choreography scales in terms of coupling but does not scale in terms of comprehensibility. Add orchestration for complex business processes from the start.",
+    follow_up_questions: [
+      {
+        text: "What is the Saga pattern?",
+        type: "linked",
+        links_to: "4.1.01"
+      },
+      {
+        text: "What tools exist for saga orchestration in production?",
+        type: "inline",
+        mini_answer: "Temporal: most popular, durable execution framework — workflow as code, handles retries/timeouts/signals natively, excellent visibility. AWS Step Functions: managed, visual workflow editor, good for AWS-native architectures. Conductor (Netflix): open source, good for microservices. Camunda: BPMN-based, good for business process modelling. For simple cases: a dedicated saga service with a state machine in your DB works without external tooling."
+      }
+    ],
+    related: ["4.1.01", "4.3.01", "1.3.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["choreography", "orchestration", "saga",
+           "event-driven", "integration", "trade-offs"]
+  }
+  
   // ══════════════════════════════════════════
   // SUBSECTION 4.5 — DATA CONSISTENCY PATTERNS
   // Coming in Batch 5
