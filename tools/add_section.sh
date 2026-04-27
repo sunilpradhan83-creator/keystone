@@ -1,6 +1,6 @@
 #!/bin/bash
 # Keystone — Add Section Script
-# Usage: bash add_section.sh 4 "Design Patterns"
+# Usage: bash tools/add_section.sh 4 "Design Patterns"
 # This script is called by Claude Code when adding a new section
 
 set -e

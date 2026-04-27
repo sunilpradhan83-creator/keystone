@@ -1,6 +1,6 @@
 #!/bin/bash
 # Keystone — Deploy Script
-# Usage: bash deploy.sh "commit message"
+# Usage: bash tools/deploy.sh "commit message"
 
 set -e
 MESSAGE=${1:-"Update Keystone"}
@@ -13,7 +13,7 @@ echo ""
 
 # Validate first
 echo "Step 1: Validating questions..."
-node validate_questions.js
+node "$(dirname "$0")/validate_questions.js"
 if [ $? -ne 0 ]; then
   echo "❌ Validation failed. Fix errors first."
   exit 1

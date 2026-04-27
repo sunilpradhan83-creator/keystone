@@ -9,7 +9,7 @@ console.log('\n🔑 KEYSTONE — Question Validator');
 console.log('──────────────────────────────────\n');
 
 // ── Load all section files ────────────────────────────
-const questionsDir  = path.join(__dirname, 'questions');
+const questionsDir  = path.join(__dirname, '..', 'questions');
 const sectionFiles  = fs.readdirSync(questionsDir)
   .filter(f => f.startsWith('section_') && f.endsWith('.js'))
   .sort();
