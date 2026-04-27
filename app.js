@@ -929,12 +929,12 @@
       if (thinkSection && state.answerRevealed) thinkSection.classList.add('hidden');
     } else {
       if (quickSection)    quickSection.classList.add('hidden');
-      if (detailedSection) detailedSection.classList.remove('hidden');
-      if (kpSection)       kpSection.classList.remove('hidden');
-      if (diagramSection && q.has_diagram    && q.diagram)            diagramSection.classList.remove('hidden');
-      if (codeSection    && q.has_code       && q.code_snippet)       codeSection.classList.remove('hidden');
-      if (fuSection      && q.follow_up_questions?.length)            fuSection.classList.remove('hidden');
-      if (relSection     && q.related?.length)                        relSection.classList.remove('hidden');
+      show(detailedSection);
+      show(kpSection);
+      if (diagramSection && q.has_diagram && q.diagram)               show(diagramSection);
+      if (codeSection    && q.has_code    && q.code_snippet)          show(codeSection);
+      if (fuSection      && q.follow_up_questions?.length)            show(fuSection);
+      if (relSection     && q.related?.length)                        show(relSection);
       if (tagsRow)         tagsRow.classList.remove('hidden');
       if (thinkSection && state.answerRevealed) thinkSection.classList.add('hidden');
     }
