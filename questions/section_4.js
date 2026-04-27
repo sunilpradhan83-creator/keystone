@@ -1165,13 +1165,416 @@ Layer 6: Idempotency
     has_code: false,
     tags: ["resilience", "circuit-breaker", "bulkhead",
            "retry", "timeout", "fallback", "strategy"]
-  }
+  },
   
   // ══════════════════════════════════════════
   // SUBSECTION 4.3 — MESSAGING PATTERNS
-  // Coming in Batch 3
   // ══════════════════════════════════════════
 
+  {
+    id: "4.3.01",
+    section: 4,
+    subsection: "4.3",
+    level: "intermediate",
+    question: "What are the core messaging patterns? Explain Point-to-Point, Pub/Sub, and when to use each.",
+    quick_answer: "→ Point-to-Point (Queue): one producer, one consumer — each message processed exactly once\n→ Pub/Sub (Topic): one producer, multiple subscriber groups — each gets a copy\n→ Kafka combines both: within consumer group = P2P, across groups = Pub/Sub\n→ P2P for: task distribution, work queues, load distribution across workers\n→ Pub/Sub for: event broadcasting, audit logs, multiple services reacting to same event\n→ Key difference: P2P message consumed and removed; Pub/Sub message retained for all subscribers",
+    detailed_answer: "Messaging patterns define how messages flow between producers and consumers.\n\nPoint-to-Point (Queue):\n→ One message consumed by exactly one consumer\n→ Competing consumers: multiple consumers share a queue, distributing load\n→ Message removed after consumption\n→ Use for: task queues, email jobs, image processing, any work item\n→ Tools: SQS standard queue, RabbitMQ queues\n\nPub/Sub (Topic):\n→ One message received by ALL subscriber groups\n→ Each subscriber group maintains its own position/offset\n→ Message retained after consumption (consumers can re-read)\n→ Use for: event broadcasting, audit logs, multiple services reacting to payment event\n→ Tools: Kafka topics, SNS, Google Pub/Sub\n\nKafka unifies both models:\n→ Within one consumer group: partitions distributed across consumers = P2P (each message processed once per group)\n→ Across multiple consumer groups: each group gets all messages = Pub/Sub\n→ This is why Kafka is the dominant choice: one system, both patterns\n\nRequest-Reply (async RPC):\n→ Producer sends request with correlation_id and reply_to queue\n→ Consumer processes and sends to reply_to queue\n→ Producer correlates response by correlation_id\n→ Use when: you need a response but want decoupling from synchronous HTTP",
+    key_points: [
+      "P2P: one consumer per message — competing consumers for scale",
+      "Pub/Sub: all subscriber groups receive every message",
+      "Kafka: within group = P2P, across groups = Pub/Sub",
+      "P2P message consumed and removed; Pub/Sub message retained",
+      "Competing consumers in P2P: natural horizontal scaling of workers",
+      "Request-Reply: async RPC — response via reply_to queue with correlation_id"
+    ],
+    hint: "Order service publishes OrderCreated. Inventory, Invoice, and Notification all need to react. Which pattern? Now think about image thumbnailing — only one worker should process each image. Which pattern?",
+    common_trap: "Using P2P when you need Pub/Sub. If you use a single queue for an event that multiple services need, only one service ever processes it. The others never see the message. Use topics for fan-out, queues for task distribution.",
+    follow_up_questions: [
+      {
+        text: "What is a Dead Letter Queue and how do you operationalise it?",
+        type: "linked",
+        links_to: "4.3.02"
+      },
+      {
+        text: "How does Kafka consumer group rebalancing work?",
+        type: "linked",
+        links_to: "4.3.03"
+      }
+    ],
+    related: ["4.3.02", "4.3.03", "1.3.01"],
+    has_diagram: true,
+    diagram: `POINT-TO-POINT vs PUB/SUB
+
+POINT-TO-POINT (Queue):
+Producer ──► [Queue] ──► Consumer A  ← gets message
+                    └──► Consumer B  ← waiting
+                    └──► Consumer C  ← waiting
+Only ONE consumer processes each message
+Natural load distribution
+
+PUB/SUB (Topic):
+Producer ──► [Topic] ──► Group 1: Inventory  ← gets copy
+                    ├──► Group 2: Invoice     ← gets copy
+                    └──► Group 3: Notify      ← gets copy
+ALL groups receive every message
+
+KAFKA (combines both):
+                        ┌── Consumer A ┐
+Producer ──► Topic ──── ┤              ├ Group 1 (P2P within group)
+                        └── Consumer B ┘
+                        ┌── Consumer C ─ Group 2 (Pub/Sub across groups)`,
+    has_code: false,
+    tags: ["messaging", "pub-sub", "point-to-point",
+           "kafka", "queues", "patterns"]
+  },
+
+  {
+    id: "4.3.02",
+    section: 4,
+    subsection: "4.3",
+    level: "intermediate",
+    question: "What is a Dead Letter Queue? How do you operationalise it in production?",
+    quick_answer: "→ DLQ: where messages go after failing max retries — prevents poison pills blocking the queue\n→ Poison pill: message that always fails — blocks all subsequent messages without DLQ\n→ Alert on DLQ depth > 0 immediately — never tolerate silent DLQ growth\n→ Include full context: original message, error, stack trace, attempt count, timestamp\n→ Build replay tooling before you need it — not during an incident\n→ Always find root cause before replaying — fix bug first, replay second",
+    detailed_answer: "A poison pill message is a message that consistently fails processing. Without a DLQ, it retries forever, blocking subsequent messages.\n\nDLQ configuration:\n→ Max receive count: 3-5 retries before moving to DLQ\n→ Retention: 7-14 days (enough time for on-call to investigate)\n→ Separate DLQ per topic/queue — not a shared DLQ for everything\n→ Include metadata: original topic, partition, offset, error, stack trace, attempt count, timestamp\n\nOperationalising:\n\n1. Alerting:\nAlert on DLQ depth > 0 immediately. A message in DLQ means a failure needing investigation. Never wait for daily reports.\n\n2. Dashboard:\nDLQ depth per topic. Trend chart. Last moved time.\n\n3. Investigation tooling:\nEasy way to inspect DLQ message content. Consumer group offset tools.\n\n4. Replay tooling:\nAfter fixing the bug, mechanism to replay DLQ messages back to the original topic. Must be idempotent. Replay in small batches — validate each before continuing.\n\n5. Manual discard:\nSometimes messages are genuinely invalid (test data in production). Must be able to discard with audit log.\n\nCommon DLQ scenarios:\n→ Malformed message (schema mismatch)\n→ Unhandled edge case in consumer code\n→ Downstream dependency unavailable during processing\n→ Message referencing deleted entity\n\nAnti-pattern: emptying the DLQ without understanding why messages ended up there.",
+    key_points: [
+      "DLQ prevents poison pills blocking the entire queue forever",
+      "Alert on DLQ depth > 0 — never tolerate silent DLQ growth",
+      "Include full context: error, stack trace, attempt count, original message",
+      "Build replay tooling before you need it — not during an incident",
+      "Separate DLQ per queue/topic — not a shared catch-all",
+      "Fix root cause before replaying — otherwise DLQ fills again"
+    ],
+    hint: "A consumer has a null pointer bug for messages with a specific field. Without DLQ it retries forever, blocking all subsequent messages. 3 hours later you have 50,000 blocked messages. When did you want to know about the first failure?",
+    common_trap: "Treating DLQ as a dump and never reviewing it. Teams that do not monitor DLQ depth accumulate thousands of unprocessed messages over weeks, creating massive data inconsistency that is painful to reconcile.",
+    follow_up_questions: [
+      {
+        text: "How do you build an idempotent DLQ replay mechanism?",
+        type: "inline",
+        mini_answer: "Replay reads from DLQ, re-publishes each message to original topic with same message ID. Consumer must be idempotent (check processed_events by event_id before processing). Replay in batches of 10-100 — validate correctness before continuing. Keep audit log of replayed message IDs and timestamps. Never replay all at once — a bad message will re-fill the DLQ."
+      }
+    ],
+    related: ["4.3.01", "4.1.02", "3.3.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["DLQ", "dead-letter-queue", "messaging",
+           "reliability", "operations", "kafka"]
+  },
+
+  {
+    id: "4.3.03",
+    section: 4,
+    subsection: "4.3",
+    level: "advanced",
+    question: "How does Kafka consumer group rebalancing work? What is the impact and how do you minimise it?",
+    quick_answer: "→ Rebalance: triggered when consumer joins/leaves group or topic partition count changes\n→ During rebalance: ALL consumers in group pause processing — stop-the-world\n→ Eager rebalancing (default): all consumers release partitions, reassigned from scratch\n→ Cooperative rebalancing: only affected partitions moved — most consumers continue\n→ Minimise impact: use cooperative rebalancing, increase session.timeout.ms, graceful shutdown\n→ Rebalance storms: cascading rebalances — avoid by tuning heartbeat and session timeouts",
+    detailed_answer: "Kafka partitions are distributed across consumers in a consumer group. When group membership changes, partitions must be redistributed — this is a rebalance.\n\nTriggers:\n→ New consumer joins group (scale out)\n→ Consumer leaves group (crash or scale in)\n→ Consumer misses heartbeat (session timeout)\n→ Topic partition count increases\n→ Application calls unsubscribe()\n\nEager Rebalancing (default prior to Kafka 2.4):\n→ ALL consumers revoke ALL partitions simultaneously\n→ Group coordinator reassigns from scratch\n→ ALL consumers pause processing during reassignment\n→ Duration: seconds to tens of seconds depending on group size\n→ Impact: message processing lag spike during every deploy\n\nCooperative/Incremental Rebalancing (Kafka 2.4+):\n→ Only partitions that need to move are revoked\n→ Consumers keep their other partitions and continue processing\n→ Multiple smaller rebalance rounds but minimal disruption\n→ Enable with: partition.assignment.strategy = CooperativeStickyAssignor\n\nMinimising rebalance impact:\n→ Use CooperativeStickyAssignor (Kafka 2.4+)\n→ Tune session.timeout.ms (default 45s) — higher = fewer false timeouts\n→ Tune heartbeat.interval.ms = session.timeout.ms / 3\n→ Graceful shutdown: call consumer.close() before terminating\n→ Avoid long processing in poll loop — commit offsets regularly\n→ max.poll.interval.ms: increase if processing is legitimately slow",
+    key_points: [
+      "Rebalance: partition redistribution when group membership changes",
+      "Eager rebalancing: all consumers pause — stop-the-world during deploy",
+      "Cooperative rebalancing: only affected partitions move — minimal disruption",
+      "Enable: partition.assignment.strategy = CooperativeStickyAssignor",
+      "Rebalance storm: cascading rebalances — tune timeouts to prevent",
+      "Graceful shutdown: always call consumer.close() before terminating"
+    ],
+    hint: "Every time you deploy a new version of your service (rolling deploy), Kafka sees consumers joining and leaving. With 10 instances and eager rebalancing, you get 20 rebalance events during every deploy. What does that do to message processing lag?",
+    common_trap: "Not configuring cooperative rebalancing and accepting eager rebalancing as normal. Every rolling deployment causes a full processing pause. On high-throughput topics this creates significant lag that takes minutes to clear.",
+    follow_up_questions: [
+      {
+        text: "How does Kafka partition assignment strategy affect ordering guarantees?",
+        type: "inline",
+        mini_answer: "Kafka guarantees ordering within a partition only. One consumer per partition within a group. If you need ordered processing for a specific entity (e.g. all events for order_id=123 processed in order), partition by that key — all messages with same key go to same partition, processed by same consumer. More consumers than partitions = idle consumers. More partitions than consumers = one consumer handles multiple partitions."
+      }
+    ],
+    related: ["4.3.01", "8.2.01"],
+    has_diagram: false,
+    has_code: true,
+    code_language: "yaml",
+    code_snippet: `# Kafka Consumer — Tuning for minimal rebalance impact
+spring:
+  kafka:
+    consumer:
+      group-id: order-service
+      # Cooperative rebalancing — minimal disruption
+      partition-assignment-strategy:
+        - org.apache.kafka.clients.consumer
+          .CooperativeStickyAssignor
+
+      # Heartbeat: 1/3 of session timeout
+      heartbeat-interval: 3000      # 3s
+      session-timeout: 45000        # 45s
+
+      # Increase if processing is legitimately slow
+      max-poll-interval-ms: 300000  # 5 min
+
+      # Commit offsets manually for reliability
+      enable-auto-commit: false
+      auto-offset-reset: earliest`,
+    tags: ["kafka", "consumer-group", "rebalancing",
+           "cooperative", "messaging", "performance"]
+  },
+
+  {
+    id: "4.3.04",
+    section: 4,
+    subsection: "4.3",
+    level: "intermediate",
+    question: "What is the Competing Consumers pattern? How does it scale message processing?",
+    quick_answer: "→ Competing consumers: multiple instances of the same consumer read from one queue\n→ Natural horizontal scaling: add more consumers to process faster\n→ Each message processed by exactly one consumer — no duplicates\n→ Kafka: scale by adding consumers up to partition count (consumers > partitions = idle consumers)\n→ SQS: unlimited competing consumers — visibility timeout prevents duplicate processing\n→ Key consideration: consumers must be stateless and idempotent",
+    detailed_answer: "The Competing Consumers pattern places multiple consumer instances behind a single queue. Each message is processed by exactly one consumer — whichever picks it up first.\n\nHow it scales:\n→ Queue depth growing → add more consumers → throughput increases linearly\n→ Queue depth shrinking → remove consumers → save resources\n→ Pairs naturally with auto-scaling: scale consumers based on queue depth metric\n\nKafka specifics:\n→ Partition = unit of parallelism\n→ Maximum parallelism = number of partitions\n→ Adding consumers beyond partition count = idle consumers (wasted resources)\n→ Plan partition count at topic creation — cannot reduce later easily\n→ Rule of thumb: partition count = max expected consumer count × 2 (headroom)\n\nSQS specifics:\n→ No partition concept — unlimited competing consumers\n→ Visibility timeout: message hidden from other consumers while being processed\n→ If consumer crashes before deleting message: visibility timeout expires → message reappears\n→ This is why consumers must be idempotent — message may be processed more than once\n\nStateless consumers:\n→ Each consumer must be stateless — no in-memory state that affects processing\n→ All state in the message or in shared storage (DB, cache)\n→ Any consumer must be able to process any message\n→ This enables safe auto-scaling without sticky routing",
+    key_points: [
+      "Competing consumers: multiple instances, one queue, each message once",
+      "Horizontal scaling: add consumers to increase throughput",
+      "Kafka: consumers ≤ partitions — extra consumers are idle",
+      "SQS: visibility timeout prevents duplicate processing",
+      "Consumers must be stateless — any consumer processes any message",
+      "Consumers must be idempotent — message redelivery is possible"
+    ],
+    hint: "Your image processing queue has 10,000 messages and one consumer processing 100/minute. You need to catch up in 1 hour instead of 100 hours. What is the simplest solution?",
+    common_trap: "Adding more Kafka consumers than partitions expecting more throughput. Extra consumers sit idle — Kafka cannot assign a partition to more than one consumer in the same group. Increase partition count first.",
+    follow_up_questions: [
+      {
+        text: "How do you auto-scale consumers based on queue depth?",
+        type: "inline",
+        mini_answer: "AWS: CloudWatch metric on SQS queue depth → Auto Scaling Group policy → scale EC2 or ECS tasks. Kubernetes: KEDA (Kubernetes Event-Driven Autoscaling) — scales pods based on Kafka consumer group lag or SQS queue depth. Target: keep queue depth below X messages. Scale up fast (less hysteresis), scale down slowly (avoid thrashing). Always respect Kafka partition limit when scaling Kafka consumers."
+      }
+    ],
+    related: ["4.3.01", "3.1.01", "5.2.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["competing-consumers", "kafka", "SQS",
+           "scaling", "messaging", "partitions"]
+  },
+
+  {
+    id: "4.3.05",
+    section: 4,
+    subsection: "4.3",
+    level: "advanced",
+    question: "What is the Transactional Outbox pattern vs using Kafka transactions directly? When do you use each?",
+    quick_answer: "→ Outbox: write event to DB table in same transaction as domain data — relay publishes to Kafka\n→ Kafka transactions: producer wraps multiple topic writes in a transaction — atomic across topics\n→ Outbox: for DB → Kafka boundary (most common microservice use case)\n→ Kafka transactions: for Kafka → Kafka boundary (stream processing, Kafka Streams)\n→ Outbox works with any DB; Kafka transactions only within Kafka ecosystem\n→ Both guarantee atomicity — different boundaries",
+    detailed_answer: "These two patterns solve atomicity problems at different system boundaries.\n\nOutbox Pattern:\n→ Boundary: relational/document DB ↔ Kafka\n→ Problem: write to DB and publish to Kafka atomically\n→ Solution: write outbox row in same DB transaction, relay publishes asynchronously\n→ Works with: any database that supports transactions\n→ Delivery: at-least-once (relay may republish on restart)\n→ Best for: microservices with their own DB that publish domain events\n\nKafka Transactions:\n→ Boundary: Kafka ↔ Kafka\n→ Problem: read from topic A, transform, write to topic B — atomically\n→ Solution: Kafka producer API with transactional.id — wraps produces and offset commits\n→ Requires: enable.idempotence=true, isolation.level=read_committed on consumers\n→ Delivery: exactly-once within Kafka ecosystem\n→ Best for: Kafka Streams, stream processing pipelines\n\nWhen to use which:\n→ Service has a database → use Outbox\n→ Stateless stream processor (Kafka in, Kafka out) → use Kafka transactions\n→ Both needed? Unlikely in same service — different use cases\n\nCommon mistake:\nTrying to use Kafka transactions to solve the DB + Kafka atomicity problem. Kafka transactions cannot span a database write — they only work within Kafka.",
+    key_points: [
+      "Outbox: DB + Kafka atomicity — domain data + event in same DB transaction",
+      "Kafka transactions: Kafka + Kafka atomicity — stream processing",
+      "Outbox: at-least-once delivery, works with any DB",
+      "Kafka transactions: exactly-once within Kafka ecosystem only",
+      "Service with DB → Outbox; Stateless stream processor → Kafka transactions",
+      "Kafka transactions cannot span a DB write — different boundary"
+    ],
+    hint: "You have an Order service with PostgreSQL. On order creation you want to publish OrderCreated to Kafka atomically. Outbox or Kafka transactions? Now think about a stream processor that reads payments and writes fraud scores. Which one?",
+    common_trap: "Trying to use Kafka producer transactions to guarantee atomicity with a database write. Kafka transactions only provide atomicity within Kafka. The DB write is outside Kafka's transaction boundary — use Outbox for the DB + Kafka case.",
+    follow_up_questions: [
+      {
+        text: "What is the Outbox Pattern?",
+        type: "linked",
+        links_to: "4.1.03"
+      }
+    ],
+    related: ["4.1.03", "4.3.01", "1.3.02"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["outbox", "kafka-transactions", "exactly-once",
+           "atomicity", "messaging", "stream-processing"]
+  },
+
+  {
+    id: "4.3.06",
+    section: 4,
+    subsection: "4.3",
+    level: "intermediate",
+    question: "What is message ordering in Kafka? How do you guarantee ordered processing?",
+    quick_answer: "→ Kafka guarantees ordering within a partition only — not across partitions\n→ Same key → same partition → same consumer → ordered processing for that key\n→ Partition by business entity key: order_id, user_id, customer_id\n→ More partitions = more parallelism but ordering only per partition\n→ Global ordering across all partitions: use single partition (kills parallelism)\n→ If you need order_id=123 events processed in sequence: partition key = order_id",
+    detailed_answer: "Kafka's ordering guarantee is simple and important: messages within a single partition are delivered in the order they were produced. That is the only ordering guarantee Kafka provides.\n\nHow partition assignment works:\n→ Kafka hashes the message key to determine partition: partition = hash(key) % numPartitions\n→ Same key always goes to same partition\n→ Same partition always consumed by same consumer (within a group)\n→ Therefore: same key → same partition → same consumer → ordered processing\n\nDesigning for ordering:\n→ What entity needs ordered processing? Order events, user events, payment events?\n→ Use that entity's ID as the partition key\n→ All events for order_id=123 go to same partition, processed in order\n→ Events for different orders processed in parallel across partitions\n\nOrdering vs parallelism trade-off:\n→ More partitions = more parallel consumers = higher throughput\n→ But ordering only guaranteed within a partition\n→ If you need strict global ordering: one partition (zero parallelism)\n→ Most systems need per-entity ordering, not global — design accordingly\n\nOrdering with failures:\n→ Consumer crashes mid-processing\n→ Rebalance assigns partition to another consumer\n→ Consumer starts from last committed offset\n→ Uncommitted messages replayed in order\n→ Idempotency handles the replay correctly",
+    key_points: [
+      "Kafka ordering guaranteed within a partition only — not globally",
+      "Same key → same partition → same consumer → ordered for that key",
+      "Partition by business entity: order_id, user_id, customer_id",
+      "Global ordering: requires single partition — kills all parallelism",
+      "Per-entity ordering: most real use cases — design for this not global",
+      "Ordering preserved through failures via offset replay"
+    ],
+    hint: "You have payment events for 1 million customers. You need each customer's payments processed in order but not globally. You want parallelism. Partition key = customer_id. How many partitions do you need?",
+    common_trap: "Assuming Kafka guarantees ordering across the entire topic. It does not. Two messages produced to different partitions may be consumed in any order. Only messages within the same partition are ordered.",
+    follow_up_questions: [
+      {
+        text: "What happens to ordering when you increase partition count on a live topic?",
+        type: "inline",
+        mini_answer: "Increasing partition count changes the hash mapping: hash(key) % oldCount vs hash(key) % newCount. A key that previously mapped to partition 3 may now map to partition 7. Messages already in old partitions are processed in old order. New messages go to new partition assignments. Brief ordering disruption for keys that moved partitions. For strict ordering requirements: never change partition count. Plan ahead — Kafka recommends setting partition count high initially."
+      }
+    ],
+    related: ["4.3.01", "4.3.03", "8.2.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["kafka", "ordering", "partitions",
+           "messaging", "consistency"]
+  },
+
+  {
+    id: "4.3.07",
+    section: 4,
+    subsection: "4.3",
+    level: "intermediate",
+    question: "What is event schema evolution in messaging systems? How do you handle breaking changes?",
+    quick_answer: "→ Schema evolution: changing event structure without breaking existing producers/consumers\n→ Schema Registry (Confluent): enforces compatibility rules before publishing\n→ Safe: add optional fields with defaults, add new RPC methods\n→ Unsafe: remove fields, change field types, rename fields\n→ Breaking change strategy: create new topic version (events.v2) — migrate consumers gradually\n→ Consumers: always ignore unknown fields — forward compatibility",
+    detailed_answer: "In event-driven systems, producers and consumers deploy independently. Schema changes must not break consumers that have not yet been updated.\n\nSchema Registry:\nCentralised store for schema versions. Producers register schemas before publishing. Consumers fetch schemas by ID embedded in the message. Confluent Schema Registry supports Avro, Protobuf, and JSON Schema.\n\nCompatibility modes:\n→ BACKWARD: new schema reads old data (add optional fields)\n→ FORWARD: old schema reads new data (consumers ignore unknown fields)\n→ FULL: both — safest, most restrictive\n\nSafe changes (non-breaking):\n→ Add new optional field with a default value\n→ Add new enum value (consumers must handle UNKNOWN)\n→ Add new message type to the topic\n\nUnsafe changes (breaking):\n→ Remove a field that consumers depend on\n→ Change field type (int → string)\n→ Rename a field (breaking — treat as remove + add)\n→ Change field semantics without changing name\n\nHandling breaking changes:\n→ Create a new topic version: payments.events.v2\n→ Dual-publish: producer writes to both v1 and v2 during transition\n→ Migrate consumers to v2 one by one\n→ Stop publishing to v1 once all consumers migrated\n→ Deprecate v1 topic after retention period\n\nConsumer best practice:\n→ Always ignore unknown fields — essential for forward compatibility\n→ Never fail on unrecognised enum values — use a default UNKNOWN case",
+    key_points: [
+      "Schema Registry: enforces compatibility before publishing — prevents breaking changes",
+      "FULL compatibility: both producers and consumers can upgrade independently",
+      "Safe: add optional fields with defaults",
+      "Unsafe: remove fields, change types, rename fields",
+      "Breaking change: create new topic version (events.v2) + gradual migration",
+      "Consumers: always ignore unknown fields — mandatory for forward compatibility"
+    ],
+    hint: "You need to rename a field in your OrderCreated event. You have 5 consumer services. They deploy independently. How do you rename without taking all consumers down simultaneously?",
+    common_trap: "Renaming a field by adding the new name and removing the old name in the same release. Old consumers expecting the old field name receive null. Always add new field first, migrate consumers, then remove old field — three separate releases.",
+    follow_up_questions: [
+      {
+        text: "What is Avro and why is it preferred over JSON for Kafka messages?",
+        type: "inline",
+        mini_answer: "Avro is a compact binary serialisation format with schema stored separately (in Schema Registry). 3-10x smaller than JSON — no field names in payload, just values. Strong typing with schema evolution rules built in. Schema validation at publish time catches breaking changes before they reach consumers. JSON has no built-in schema enforcement — any consumer can receive malformed data silently."
+      }
+    ],
+    related: ["4.3.01", "1.3.03", "8.2.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["schema-evolution", "schema-registry", "avro",
+           "kafka", "messaging", "backward-compatibility"]
+  },
+
+  {
+    id: "4.3.08",
+    section: 4,
+    subsection: "4.3",
+    level: "advanced",
+    question: "What is the Inbox Pattern? How does it complement the Outbox Pattern?",
+    quick_answer: "→ Inbox: consumer writes received event to inbox table before processing — prevents duplicate processing\n→ Outbox (producer side): guarantees event is published exactly once\n→ Inbox (consumer side): guarantees event is processed exactly once\n→ Together: end-to-end exactly-once semantics across DB + Kafka boundary\n→ Check inbox before processing: already seen → skip. New → process + record atomically\n→ Inbox + Outbox = the complete solution for reliable event-driven systems",
+    detailed_answer: "The Outbox Pattern guarantees reliable publishing. But at-least-once delivery means the consumer may receive the same event more than once.\n\nThe Inbox Pattern solves the consumer side:\n\nWithout Inbox:\n→ Consumer receives OrderCreated event\n→ Updates inventory in DB\n→ Crashes before committing Kafka offset\n→ On restart: same event redelivered\n→ Inventory decremented twice — incorrect\n\nWith Inbox:\n→ Consumer receives event\n→ Checks inbox table: is event_id already there?\n→ If yes: skip (already processed)\n→ If no: process + INSERT into inbox table — in SAME DB transaction\n→ If crash: both rollback → event redelivered → processed correctly\n\nImplementation:\n1. Inbox table: (event_id PK, processed_at, source_topic)\n2. On receive: SELECT COUNT(*) FROM inbox WHERE event_id = ?\n3. If found: skip, commit Kafka offset, move on\n4. If not found: BEGIN TRANSACTION → process → INSERT inbox row → COMMIT\n5. After commit: commit Kafka offset\n\nWhy same transaction matters:\n→ Processing succeeds, inbox write fails → event reprocessed → duplicate\n→ Processing fails, inbox write commits → event lost → never processed\n→ Both in same transaction: either both commit or both rollback — safe to retry\n\nInbox cleanup:\nDelete inbox rows older than max Kafka retention period. No need to keep them longer — event cannot be redelivered after retention expires.",
+    key_points: [
+      "Inbox: consumer records received event before processing — prevents duplicates",
+      "Check inbox BEFORE processing: seen → skip; new → process + record atomically",
+      "Process + inbox insert in SAME DB transaction — atomicity guaranteed",
+      "Outbox (producer) + Inbox (consumer) = end-to-end exactly-once",
+      "Commit Kafka offset AFTER successful DB transaction — correct ordering",
+      "Inbox cleanup: delete rows older than Kafka topic retention period"
+    ],
+    hint: "Your consumer processes a payment event and updates the account balance. It crashes after the DB commit but before committing the Kafka offset. The event is redelivered. Without the Inbox pattern, what happens to the balance?",
+    common_trap: "Checking the inbox table and processing in separate transactions. If the service crashes between the inbox check (not found) and the inbox insert, another instance also sees 'not found' and processes the same event. Atomic check-and-insert prevents this.",
+    follow_up_questions: [
+      {
+        text: "What is the Outbox Pattern?",
+        type: "linked",
+        links_to: "4.1.03"
+      },
+      {
+        text: "How does Inbox differ from simple idempotency key checking?",
+        type: "inline",
+        mini_answer: "Idempotency key: stores key + result, returns same result on retry. Inbox: stores event_id to skip processing entirely — no result stored. Inbox is lighter (no result to store) but only prevents re-processing, does not return previous result. Use idempotency keys for API endpoints (must return same response). Use inbox for event consumers (just skip duplicate processing)."
+      }
+    ],
+    related: ["4.1.03", "4.3.01", "4.2.10"],
+    has_diagram: false,
+    has_code: true,
+    code_language: "java",
+    code_snippet: `// Inbox Pattern — Consumer
+@Service
+@Transactional
+public class PaymentEventConsumer {
+
+    @Autowired private InboxRepository inbox;
+    @Autowired private AccountRepository accounts;
+
+    @KafkaListener(topics = "payment.events")
+    public void handle(PaymentEvent event,
+            Acknowledgment ack) {
+        String eventId = event.getEventId();
+
+        // Check inbox — already processed?
+        if (inbox.existsById(eventId)) {
+            log.info("Duplicate {}, skipping", eventId);
+            ack.acknowledge(); // commit offset
+            return;
+        }
+
+        // Process + record in SAME transaction
+        accounts.debit(event.getAccountId(),
+            event.getAmount());
+
+        inbox.save(new InboxEntry(eventId,
+            Instant.now()));
+
+        // Commit DB transaction (implicit @Transactional)
+        // THEN commit Kafka offset
+        ack.acknowledge();
+    }
+}`,
+    tags: ["inbox", "outbox", "exactly-once",
+           "idempotency", "kafka", "messaging"]
+  },
+
+  {
+    id: "4.3.09",
+    section: 4,
+    subsection: "4.3",
+    level: "intermediate",
+    question: "What is the Fan-Out pattern in messaging? How do you implement it reliably?",
+    quick_answer: "→ Fan-out: one event triggers multiple independent downstream consumers simultaneously\n→ Use Pub/Sub (Kafka topic or SNS): all subscriber groups receive every message\n→ Each subscriber processes independently — one slow consumer does not affect others\n→ Fan-out vs orchestration: fan-out for fire-and-forget, orchestration when you need all to succeed\n→ AWS pattern: SNS → multiple SQS queues (one per consumer) — decoupled, reliable\n→ Kafka pattern: one topic, multiple consumer groups — natural fan-out",
+    detailed_answer: "Fan-out means one event reaching multiple consumers. The classic example: payment processed → inventory update + invoice generation + notification + analytics.\n\nWhy fan-out over direct calls:\n→ Publisher does not know or care how many consumers exist\n→ Add new consumer without changing publisher\n→ One slow consumer does not slow others\n→ Consumer failure does not affect other consumers or publisher\n\nKafka fan-out:\n→ Single topic: payment.processed\n→ Multiple consumer groups: inventory-service, invoice-service, notification-service\n→ Each group gets every message independently\n→ Each group has its own offset — processes at its own pace\n→ Natural fan-out built into Kafka's consumer group model\n\nAWS SNS + SQS fan-out:\n→ SNS topic receives the event\n→ Each consumer has its own SQS queue subscribed to the SNS topic\n→ SNS delivers a copy to each queue\n→ Each consumer reads from its own queue\n→ Benefit: SQS provides buffering, retry, DLQ per consumer independently\n\nFan-out vs Saga orchestration:\n→ Fan-out: fire-and-forget, consumers are truly independent\n→ Saga: need ALL steps to succeed for consistency — use orchestration\n→ Fan-out when: each consumer result does not affect others\n→ Saga when: partial completion leaves system in invalid state",
+    key_points: [
+      "Fan-out: one event → multiple independent consumers via Pub/Sub",
+      "Kafka: one topic, multiple consumer groups = natural fan-out",
+      "AWS: SNS → multiple SQS queues — buffered fan-out per consumer",
+      "Each consumer independent: own pace, own DLQ, own retry",
+      "Fan-out vs Saga: fan-out for independent reactions, Saga for coordinated transactions",
+      "Add new consumer without changing the publisher — true decoupling"
+    ],
+    hint: "Payment processed event needs to trigger 4 services. With REST calls: if one fails, you roll back the payment. With fan-out: each service processes independently, at its own pace. Which is more resilient?",
+    common_trap: "Using fan-out when you actually need a Saga. If inventory reservation failing means you should not send the invoice, fan-out is wrong — you need orchestrated coordination. Fan-out is for truly independent reactions only.",
+    follow_up_questions: [
+      {
+        text: "What is the difference between fan-out and broadcast?",
+        type: "inline",
+        mini_answer: "Fan-out: one event to multiple interested consumers — each consumer is a different service with a different role. Broadcast: same event to multiple instances of the SAME service — e.g. invalidating a cache entry across all instances. Fan-out is cross-service. Broadcast is cross-instance of one service. Kafka fan-out uses different consumer groups. Kafka broadcast would send to each instance in its own group."
+      }
+    ],
+    related: ["4.3.01", "4.1.01", "1.3.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["fan-out", "pub-sub", "kafka", "SNS", "SQS",
+           "messaging", "event-driven"]
+  },
+
+  {
+    id: "4.3.10",
+    section: 4,
+    subsection: "4.3",
+    level: "advanced",
+    question: "What is back-pressure in messaging systems? How do you handle it?",
+    quick_answer: "→ Back-pressure: consumer cannot process messages as fast as producer produces them\n→ Queue depth grows → memory/storage exhaustion → system failure\n→ Detection: monitor consumer lag (Kafka) or queue depth (SQS)\n→ Solutions: scale consumers, throttle producers, shed load (drop low-priority messages)\n→ Reactive streams: propagate back-pressure signal upstream — producer slows down\n→ Never ignore growing queue depth — it always ends in failure",
+    detailed_answer: "Back-pressure occurs when the rate of message production exceeds the rate of consumption. Left unhandled, queues grow indefinitely until storage is exhausted.\n\nDetection:\n→ Kafka: consumer group lag = max offset - committed offset per partition\n→ SQS: ApproximateNumberOfMessagesVisible metric\n→ Alert thresholds: lag > 10,000 messages or lag growing consistently\n\nHandling strategies:\n\n1. Scale consumers (horizontal):\n   Add more consumer instances.\n   Works up to partition count in Kafka.\n   Most common first response.\n\n2. Increase consumer throughput (vertical):\n   Batch processing: process N messages per poll instead of 1.\n   Parallelise within consumer using thread pools.\n   Optimise processing logic.\n\n3. Throttle producers:\n   Signal producers to slow down via rate limiting.\n   Propagate back-pressure upstream.\n   Works only if you control the producer.\n\n4. Shed load (controlled):\n   Drop or deprioritise low-priority messages.\n   Process high-priority messages first.\n   Requires message priority classification.\n\n5. Time-based expiry:\n   Messages with TTL: expired messages automatically removed.\n   Only for use cases where stale messages are irrelevant.\n\nReactive systems (Project Reactor, RxJava):\n→ Built-in back-pressure propagation\n→ Consumer requests N items at a time\n→ Producer sends at most N\n→ System never produces faster than consumer can handle\n→ Elegant but requires reactive programming model throughout",
+    key_points: [
+      "Back-pressure: production rate exceeds consumption rate — queue grows",
+      "Detection: Kafka consumer lag, SQS queue depth — alert on growth",
+      "Scale consumers first: most common immediate response",
+      "Batch processing: process N messages per poll — increases throughput",
+      "Shed load: drop low-priority messages under sustained pressure",
+      "Never ignore growing queue depth — unhandled back-pressure = eventual outage"
+    ],
+    hint: "Your order processing service usually processes 1000 messages/minute. A flash sale generates 50,000 messages/minute for 10 minutes. What is your strategy? You have 5 minutes before the queue depth becomes critical.",
+    common_trap: "Assuming queues can absorb unlimited back-pressure indefinitely. Kafka has storage limits. SQS has message retention limits (4 days default). RabbitMQ can run out of memory. A queue that grows without bound will eventually cause an outage.",
+    follow_up_questions: [
+      {
+        text: "How do you set up consumer lag alerting for Kafka in production?",
+        type: "inline",
+        mini_answer: "Use Kafka built-in metrics: kafka.consumer.consumer-fetch-manager-metrics.records-lag-max per consumer group. Expose via JMX → Prometheus (kafka_exporter or JMX exporter) → Grafana. Alert on: lag > threshold AND lag growing for > 5 minutes (sustained, not spike). Burpee lab: consumer lag dashboard per group per topic per partition. PagerDuty alert when lag exceeds 30-minute catchup time at current throughput."
+      }
+    ],
+    related: ["4.3.04", "3.1.01", "8.2.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["back-pressure", "kafka", "consumer-lag",
+           "messaging", "scalability", "reactive"]
+  }
+  
   // ══════════════════════════════════════════
   // SUBSECTION 4.4 — INTEGRATION PATTERNS
   // Coming in Batch 4
