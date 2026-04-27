@@ -44,13 +44,18 @@ npx serve .
 
 ## 3. Add Questions
 
-All question data lives in `data.js`. Do not modify any other file.
+Questions live in `questions/section_X.js` — one file per section.
 
-Open `data.js` and add a new object to the `questions` array following this schema:
+### Add a new section
+```bash
+bash tools/add_section.sh 5 "Cloud & Infrastructure"
+```
+This creates `questions/section_5.js`, adds the script tag to `index.html`, and wires the spread into `data.js` automatically. Then paste questions into the generated file.
 
+### Question schema
 ```js
 {
-  id: "4.2.05",          // "section.subsection.sequence"
+  id: "4.2.05",          // "section.subsection.sequence" — zero-pad sequence to 2 digits
   section: 4,            // must match a sections[].id
   subsection: "4.2",     // must match a subsections[].id
   level: "intermediate", // "basic" | "intermediate" | "advanced"
@@ -74,47 +79,35 @@ Open `data.js` and add a new object to the `questions` array following this sche
 ```
 
 Rules:
-- Every `links_to` value must match an existing question `id`. The app will `console.warn` on load for any broken links.
-- `id` format is `"section.subsection.sequence"` — keep the sequence zero-padded to 2 digits (e.g. `01`, `02`).
-- If `has_diagram: false`, omit the `diagram` field (or leave it as `""`).
-- If `has_code: false`, omit `code_language` and `code_snippet`.
+- Every `links_to` value must match an existing question `id`
+- If `has_diagram: false`, omit the `diagram` field
+- If `has_code: false`, omit `code_language` and `code_snippet`
+
+### Validate before deploying
+```bash
+node tools/validate_questions.js
+```
 
 ---
 
-## 4. Deploy to Vercel
+## 4. Deploy
 
 ```bash
-# 1. Install Vercel CLI (one-time)
-npm i -g vercel
-
-# 2. From the project directory
-cd /path/to/keystone
-
-# 3. Deploy
-vercel
-
-# 4. Follow prompts — choose "static site", accept defaults
-#    Your URL will be printed at the end, e.g.:
-#    https://keystone-abc123.vercel.app
+bash tools/deploy.sh "your commit message"
 ```
 
-On subsequent deploys:
-```bash
-vercel --prod
-```
+This runs validation first, then commits and pushes to GitHub. Vercel auto-deploys on push — live at **https://keystone-lake.vercel.app** in ~30 seconds.
 
 ---
 
 ## 5. Export / Import Progress
 
-Progress is stored in your browser's `localStorage` under the key `keystone_progress`.
+Progress is stored in `localStorage` under the key `keystone_progress`.
 
 **Export:**
-Open browser DevTools → Console, then run:
 ```js
 copy(localStorage.getItem('keystone_progress'))
 ```
-Paste the result into a file to save it.
 
 **Import:**
 ```js
@@ -123,7 +116,7 @@ location.reload();
 ```
 
 **Reset:**
-Use the Reset button on the Progress screen, or run:
+Use the Reset button on the Progress screen, or:
 ```js
 localStorage.removeItem('keystone_progress');
 location.reload();
@@ -135,12 +128,21 @@ location.reload();
 
 ```
 keystone/
-├── index.html     — All 5 screens (Home, Section, Question, Mock, Progress)
-├── style.css      — Complete dark-theme design system, all animations
-├── app.js         — All application logic (navigation, timer, spaced rep, mock)
-├── data.js        — Question bank data — THE ONLY FILE YOU EDIT
-├── vercel.json    — Static deployment config
-└── README.md      — This file
+├── index.html          — All 5 screens (Home, Section, Question, Mock, Progress)
+├── style.css           — Dark-theme design system, all animations
+├── app.js              — Application logic (navigation, timer, spaced rep, mock)
+├── data.js             — Assembles all section files into KEYSTONE_DATA
+├── questions/          — One JS file per section (the question bank)
+│   ├── section_4.js
+│   ├── section_7.js
+│   └── ...
+├── tools/              — Dev tooling (not shipped, not the app)
+│   ├── add_section.sh      — Scaffold a new section file
+│   ├── deploy.sh           — Validate + commit + push
+│   ├── validate_questions.js
+│   └── test_mode_logic.js
+├── package.json        — Dev dependencies (jsdom for tests)
+└── vercel.json         — Static deployment config
 ```
 
-No build step. No node_modules. No framework. Open `index.html` and go.
+No build step. No framework. Open `index.html` and go.
