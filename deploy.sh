@@ -1,22 +1,34 @@
 #!/bin/bash
-# Keystone — Quick Deploy Script
-# Run this after adding new questions:
-# bash deploy.sh "Add Section 4 questions"
+# Keystone — Deploy Script
+# Usage: bash deploy.sh "commit message"
 
-MESSAGE=${1:-"Update questions"}
+set -e
+MESSAGE=${1:-"Update Keystone"}
 
-echo "🚀 Deploying Keystone..."
-echo "📝 Commit: $MESSAGE"
+echo ""
+echo "🔑 KEYSTONE — Deploying"
+echo "────────────────────────────────"
+echo "Commit: $MESSAGE"
+echo ""
 
+# Validate first
+echo "Step 1: Validating questions..."
+node validate_questions.js
+if [ $? -ne 0 ]; then
+  echo "❌ Validation failed. Fix errors first."
+  exit 1
+fi
+
+# Stage and commit
+echo "Step 2: Committing..."
 git add .
 git commit -m "$MESSAGE"
+
+# Push
+echo "Step 3: Pushing to GitHub..."
 git push
 
-echo "✅ Pushed to GitHub"
-echo "⏳ Vercel auto-deploying..."
-echo "🌐 Live in ~30 seconds"
 echo ""
-echo "Your app: $(vercel ls --scope \
-  $(vercel whoami) 2>/dev/null | \
-  grep keystone | awk '{print $2}' | \
-  head -1)"
+echo "✅ Deployed successfully"
+echo "🌐 Vercel deploying — live in ~30 seconds"
+echo ""

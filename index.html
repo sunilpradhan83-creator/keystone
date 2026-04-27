@@ -346,14 +346,29 @@
   <!-- ═══════════════════════════════════════════ -->
   <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Scripts -->
+  <!-- ═══════════════════════════════════════════
+       QUESTION BANK — Section files
+       Add one line per section below
+       Must load BEFORE data.js
+       ═══════════════════════════════════════════ -->
+  <script src="questions/section_4.js"></script>
+  <script src="questions/section_7.js"></script>
+  <script src="questions/section_11.js"></script>
+  <script src="questions/section_12.js"></script>
+  <!-- ── ADD NEW SECTIONS ABOVE THIS LINE -->
+
+  <!-- Assembler — always after section files -->
   <script src="data.js"></script>
+
+  <!-- Syntax highlighting -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+
+  <!-- App logic — always last -->
   <script src="app.js"></script>
 </body>
 </html>
