@@ -876,8 +876,11 @@
     // Hide think zone
     if (thinkSection) thinkSection.classList.add('hidden');
 
-    // Stagger animate sections in
-    const sections = answerBlock.querySelectorAll('.q-section');
+    // Apply quick mode first so hidden sections are set before animating
+    applyAnswerMode('quick', q);
+
+    // Stagger animate only visible sections
+    const sections = answerBlock.querySelectorAll('.q-section:not(.hidden)');
     sections.forEach((s, i) => {
       s.style.animationDelay = (i * 60) + 'ms';
       s.classList.add('stagger-in');
@@ -888,9 +891,6 @@
     if (codeEl && window.Prism) {
       Prism.highlightElement(codeEl);
     }
-
-    // Apply quick mode (always default)
-    applyAnswerMode('quick', q);
   }
 
   function switchAnswerMode(mode, q) {
@@ -918,25 +918,24 @@
     const thinkSection    = content.querySelector('.think-section');
 
     if (mode === 'quick') {
-      show(quickSection);
-      if (quickSection) quickSection.classList.remove('hidden');
-      collapse(detailedSection);
-      collapse(kpSection);
-      collapse(diagramSection);
-      collapse(codeSection);
-      collapse(fuSection);
-      collapse(relSection);
-      if (tagsRow) tagsRow.classList.add('hidden');
+      if (quickSection)    quickSection.classList.remove('hidden');
+      if (detailedSection) detailedSection.classList.add('hidden');
+      if (kpSection)       kpSection.classList.add('hidden');
+      if (diagramSection)  diagramSection.classList.add('hidden');
+      if (codeSection)     codeSection.classList.add('hidden');
+      if (fuSection)       fuSection.classList.add('hidden');
+      if (relSection)      relSection.classList.add('hidden');
+      if (tagsRow)         tagsRow.classList.add('hidden');
       if (thinkSection && state.answerRevealed) thinkSection.classList.add('hidden');
     } else {
-      if (quickSection) quickSection.classList.add('hidden');
-      expand(detailedSection);
-      expand(kpSection);
-      if (q.has_diagram && q.diagram) expand(diagramSection);
-      if (q.has_code && q.code_snippet) expand(codeSection);
-      if (q.follow_up_questions?.length) expand(fuSection);
-      if (q.related?.length) expand(relSection);
-      if (tagsRow) tagsRow.classList.remove('hidden');
+      if (quickSection)    quickSection.classList.add('hidden');
+      if (detailedSection) detailedSection.classList.remove('hidden');
+      if (kpSection)       kpSection.classList.remove('hidden');
+      if (diagramSection && q.has_diagram    && q.diagram)            diagramSection.classList.remove('hidden');
+      if (codeSection    && q.has_code       && q.code_snippet)       codeSection.classList.remove('hidden');
+      if (fuSection      && q.follow_up_questions?.length)            fuSection.classList.remove('hidden');
+      if (relSection     && q.related?.length)                        relSection.classList.remove('hidden');
+      if (tagsRow)         tagsRow.classList.remove('hidden');
       if (thinkSection && state.answerRevealed) thinkSection.classList.add('hidden');
     }
   }
