@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KEYSTONE — Architect Interview Question Bank</title>
+  <meta name="description" content="Architect-level interview question bank with spaced repetition and mock interviews." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Prism.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SCREEN 1: HOME                              -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="screen-home" class="screen active">
+    <div class="home-container">
+
+      <!-- Header -->
+      <header class="home-header">
+        <div class="logo-block">
+          <span class="logo-icon">🏛️</span>
+        </div>
+        <div class="home-title-block">
+          <h1 class="home-title">KEYSTONE</h1>
+          <p class="home-subtitle">Architect Interview Question Bank</p>
+        </div>
+      </header>
+
+      <!-- Stats Bar -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-value" id="stat-mastered">0</span>
+          <span class="stat-label">Mastered</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="stat-total">0</span>
+          <span class="stat-label">Total</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="stat-streak">0🔥</span>
+          <span class="stat-label">Streak</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="stat-due">0</span>
+          <span class="stat-label">Due Today</span>
+        </div>
+      </div>
+
+      <!-- Overall Progress -->
+      <div class="overall-progress-block">
+        <div class="overall-progress-label">
+          <span>Overall Confidence</span>
+          <span id="overall-pct">0%</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill gradient-fill" id="overall-bar" style="--bar-width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Mode Buttons -->
+      <div class="mode-buttons">
+        <button class="mode-btn mode-study" id="btn-study" aria-label="Study mode">
+          <span class="mode-icon">📖</span>
+          <span class="mode-title">Study</span>
+          <span class="mode-sub">Review by section</span>
+        </button>
+        <button class="mode-btn mode-mock" id="btn-mock" aria-label="Mock interview mode">
+          <span class="mode-icon">🎯</span>
+          <span class="mode-title">Mock</span>
+          <span class="mode-sub">Timed interview</span>
+        </button>
+        <button class="mode-btn mode-progress" id="btn-progress" aria-label="View progress">
+          <span class="mode-icon">📊</span>
+          <span class="mode-title">Progress</span>
+          <span class="mode-sub">Track mastery</span>
+        </button>
+      </div>
+
+      <!-- Sections Grid -->
+      <div class="sections-grid" id="sections-grid">
+        <!-- Rendered by JS -->
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SCREEN 2: SECTION                           -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="screen-section" class="screen">
+    <div class="screen-inner">
+
+      <!-- Sticky Sub-header -->
+      <div class="sub-header sticky-header">
+        <button class="back-btn" id="section-back-btn" aria-label="Go back">
+          <span class="back-arrow">←</span>
+        </button>
+        <div class="sub-header-title">
+          <span id="section-screen-title">Section</span>
+          <span class="sub-header-count" id="section-screen-count"></span>
+        </div>
+        <div class="sub-header-spacer"></div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar" role="group" aria-label="Filter by difficulty">
+        <button class="filter-btn active" data-level="all">All</button>
+        <button class="filter-btn" data-level="basic">Basic</button>
+        <button class="filter-btn" data-level="intermediate">Intermediate</button>
+        <button class="filter-btn" data-level="advanced">Advanced</button>
+      </div>
+
+      <!-- Question List -->
+      <div class="question-list" id="question-list">
+        <!-- Rendered by JS -->
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SCREEN 3: QUESTION CARD                     -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="screen-question" class="screen">
+    <div class="screen-inner">
+
+      <!-- Sticky Sub-header -->
+      <div class="sub-header sticky-header" id="question-sub-header">
+        <button class="back-btn" id="question-back-btn" aria-label="Go back">
+          <span class="back-arrow">←</span>
+        </button>
+        <span class="question-id-badge" id="question-id-display"></span>
+        <span class="level-badge" id="question-level-badge"></span>
+        <div class="sub-header-spacer"></div>
+        <button class="focus-toggle-btn" id="focus-toggle-btn" aria-label="Toggle focus mode" title="Focus mode">⊡</button>
+      </div>
+
+      <!-- Breadcrumb -->
+      <div class="breadcrumb-trail" id="breadcrumb-trail">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Question Content -->
+      <div class="question-content" id="question-content">
+        <!-- Rendered by JS -->
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SCREEN 4: MOCK INTERVIEW                    -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="screen-mock" class="screen">
+    <div class="screen-inner">
+
+      <!-- Sticky Sub-header -->
+      <div class="sub-header sticky-header">
+        <button class="back-btn" id="mock-back-btn" aria-label="Exit mock interview">
+          <span class="back-arrow">←</span> Exit
+        </button>
+        <span class="sub-header-title">🎯 Mock Interview</span>
+        <div class="sub-header-spacer"></div>
+        <span class="mock-clock" id="mock-clock" aria-live="polite">00:00</span>
+      </div>
+
+      <!-- Setup Panel -->
+      <div class="mock-setup" id="mock-setup">
+        <h2 class="mock-setup-title">Configure Your Session</h2>
+
+        <p class="mock-section-label">Select Sections</p>
+        <div class="mock-section-grid" id="mock-section-grid">
+          <!-- Rendered by JS -->
+        </div>
+
+        <div class="mock-options-row">
+          <div class="mock-option-group">
+            <label class="mock-option-label" for="mock-difficulty">Difficulty</label>
+            <select class="mock-select" id="mock-difficulty">
+              <option value="all">All</option>
+              <option value="basic">Basic</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </div>
+          <div class="mock-option-group">
+            <label class="mock-option-label" for="mock-count">Questions</label>
+            <select class="mock-select" id="mock-count">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn-primary btn-fullwidth" id="mock-start-btn">
+          Start Interview →
+        </button>
+      </div>
+
+      <!-- Question Panel -->
+      <div class="mock-question-panel hidden" id="mock-question-panel">
+        <div class="mock-progress-row">
+          <span class="mock-progress-counter" id="mock-progress-counter">1 / 10</span>
+          <div class="progress-bar-track mock-progress-bar-track">
+            <div class="progress-bar-fill gradient-fill" id="mock-progress-bar" style="--bar-width:10%"></div>
+          </div>
+        </div>
+
+        <div class="mock-card">
+          <span class="mock-card-section-tag" id="mock-card-section-tag"></span>
+          <p class="mock-card-question" id="mock-card-question"></p>
+          <textarea class="scratchpad" id="mock-scratchpad" placeholder="Jot your thoughts here... (optional, not graded)" aria-label="Scratchpad"></textarea>
+          <button class="btn-primary btn-fullwidth" id="mock-reveal-btn">Reveal Answer →</button>
+        </div>
+
+        <!-- Answer panel (hidden until reveal) -->
+        <div class="mock-answer-panel hidden" id="mock-answer-panel">
+          <div class="card-section">
+            <div class="card-label accent-label">⚡ Quick Answer</div>
+            <div class="quick-answer-text" id="mock-quick-answer"></div>
+          </div>
+          <div class="card-section">
+            <div class="card-label key-points-label">✅ Key Points</div>
+            <ul class="key-points-list" id="mock-key-points"></ul>
+          </div>
+          <div class="card-section trap-card">
+            <div class="card-label warn-label">⚠️ Common Trap</div>
+            <p class="trap-text" id="mock-common-trap"></p>
+          </div>
+          <div class="mock-rating-row">
+            <p class="rating-label">Rate yourself:</p>
+            <div class="mock-rating-buttons">
+              <button class="mock-rate-btn rate-weak" data-rating="weak">😟 Weak</button>
+              <button class="mock-rate-btn rate-ok" data-rating="ok">🙂 OK</button>
+              <button class="mock-rate-btn rate-strong" data-rating="strong">💪 Strong</button>
+              <button class="mock-rate-btn rate-skip" data-rating="skip">Skip →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Panel -->
+      <div class="mock-results hidden" id="mock-results">
+        <div class="results-trophy">🎯</div>
+        <h2 class="results-title">Session Complete</h2>
+        <div class="results-score" id="results-score">0 / 0 Strong</div>
+
+        <div class="results-bars">
+          <div class="results-bar-row">
+            <span class="results-bar-label">💪 Strong</span>
+            <div class="results-bar-track">
+              <div class="results-bar-fill strong-bar" id="results-strong-bar"></div>
+            </div>
+            <span class="results-bar-count" id="results-strong-count">0</span>
+          </div>
+          <div class="results-bar-row">
+            <span class="results-bar-label">🙂 OK</span>
+            <div class="results-bar-track">
+              <div class="results-bar-fill ok-bar" id="results-ok-bar"></div>
+            </div>
+            <span class="results-bar-count" id="results-ok-count">0</span>
+          </div>
+          <div class="results-bar-row">
+            <span class="results-bar-label">😟 Weak</span>
+            <div class="results-bar-track">
+              <div class="results-bar-fill weak-bar" id="results-weak-bar"></div>
+            </div>
+            <span class="results-bar-count" id="results-weak-count">0</span>
+          </div>
+        </div>
+
+        <div class="results-actions">
+          <button class="btn-secondary" id="results-retry-btn">Try Again</button>
+          <button class="btn-primary" id="results-home-btn">Back to Home</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SCREEN 5: PROGRESS                          -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="screen-progress" class="screen">
+    <div class="screen-inner">
+
+      <!-- Sticky Sub-header -->
+      <div class="sub-header sticky-header">
+        <button class="back-btn" id="progress-back-btn" aria-label="Go back">
+          <span class="back-arrow">←</span>
+        </button>
+        <span class="sub-header-title">📊 My Progress</span>
+        <div class="sub-header-spacer"></div>
+        <button class="btn-danger-sm" id="progress-reset-btn">Reset</button>
+      </div>
+
+      <!-- Overall Stats Row -->
+      <div class="stats-bar progress-stats-bar">
+        <div class="stat-item">
+          <span class="stat-value" id="prog-mastered">0</span>
+          <span class="stat-label">Mastered</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="prog-accuracy">0%</span>
+          <span class="stat-label">Accuracy</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="prog-streak">0🔥</span>
+          <span class="stat-label">Streak</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="prog-sessions">0</span>
+          <span class="stat-label">Sessions</span>
+        </div>
+      </div>
+
+      <!-- Section Breakdown -->
+      <div class="section-breakdown" id="section-breakdown">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Weekly Activity -->
+      <div class="activity-section">
+        <div class="card-label">Activity — Last 28 Days</div>
+        <div class="activity-grid" id="activity-grid">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- TOAST                                       -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Scripts -->
+  <script src="data.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
