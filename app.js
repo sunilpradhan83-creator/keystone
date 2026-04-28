@@ -14,6 +14,7 @@
   const state = {
     currentSection: null,
     currentQuestion: null,
+    lastOpenedQuestion: null,
     currentFilter: 'all',
     navStack: [],
     studyQueue: [],
@@ -426,8 +427,11 @@
 
       qs.forEach(q => {
         const rating = p.ratings[q.id]?.rating || null;
+        const isRated = !!rating;
+
         const row = document.createElement('div');
         row.className = `question-row ${ratingClass(rating)}`;
+        row.dataset.qid = q.id;
         row.setAttribute('role', 'button');
         row.setAttribute('tabindex', '0');
         row.setAttribute('aria-label', q.question);
@@ -442,14 +446,49 @@
           </div>
           <span class="question-row-arrow">›</span>`;
 
-        row.addEventListener('click', () => openQuestion(q.id, { fromSection: sectionId }));
-        row.addEventListener('keydown', e => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
+        if (!isRated) {
+          row.addEventListener('click', () => openQuestion(q.id, { fromSection: sectionId }));
+          row.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openQuestion(q.id, { fromSection: sectionId });
+            }
+          });
+          group.appendChild(row);
+        } else {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'question-row-wrapper';
+
+          const bulletLines = q.quick_answer.split('\n')
+            .filter(l => l.trim())
+            .map(l => `<div class="qr-bullet">${escHtml(l.trim())}</div>`)
+            .join('');
+
+          const expand = document.createElement('div');
+          expand.className = 'question-row-expand';
+          expand.innerHTML = `
+            <div class="question-row-quick-answer">${bulletLines}</div>
+            <button class="question-row-open-btn" aria-label="Open full card ${escHtml(q.id)}">Open card →</button>`;
+
+          row.setAttribute('aria-expanded', 'false');
+          const toggle = () => {
+            const expanded = wrapper.classList.toggle('expanded');
+            row.setAttribute('aria-expanded', String(expanded));
+          };
+          row.addEventListener('click', toggle);
+          row.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+          });
+
+          expand.querySelector('.question-row-open-btn').addEventListener('click', e => {
+            e.stopPropagation();
             openQuestion(q.id, { fromSection: sectionId });
-          }
-        });
-        group.appendChild(row);
+          });
+
+          wrapper.appendChild(row);
+          wrapper.appendChild(expand);
+          group.appendChild(wrapper);
+        }
       });
 
       frag.appendChild(group);
@@ -486,6 +525,7 @@
     }
 
     state.currentQuestion = qId;
+    state.lastOpenedQuestion = qId;
     state.answerRevealed = false;
     state.answerMode = 'quick';
     state.hintShown = false;
@@ -1562,7 +1602,11 @@
       state.navStack = [];
       state.studyMode = false;
       if (state.currentSection) {
-        navigateTo('section');
+        navigateTo('section', () => renderQuestionList(state.currentSection, state.currentFilter));
+        requestAnimationFrame(() => {
+          const target = DOM.section.list.querySelector(`[data-qid="${state.lastOpenedQuestion}"]`);
+          if (target) target.scrollIntoView({ block: 'center', behavior: 'instant' });
+        });
       } else {
         navigateTo('home', renderHome);
       }

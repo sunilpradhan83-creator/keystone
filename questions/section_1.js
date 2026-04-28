@@ -549,4 +549,238 @@ public class IdempotencyFilter extends OncePerRequestFilter {
     tags: ["microservices", "anti-patterns", "distributed-monolith", "architecture", "design-smells"]
   },
 
+  // ── 1.3 Event-Driven Architecture ────────────────────────────────────────
+
+  {
+    id: "1.3.01",
+    section: 1,
+    subsection: "1.3",
+    level: "intermediate",
+    question: "What is Event-Driven Architecture and how does it differ from request-driven integration?",
+    quick_answer: "→ EDA: producers emit events; consumers react asynchronously — no direct coupling\n→ Request-driven: caller blocks waiting for a synchronous response\n→ Events are facts ('OrderPlaced'), not commands ('PlaceOrder')\n→ Broker (Kafka, SNS) decouples producers from consumers entirely\n→ Trade-off: higher resilience & scalability, harder to trace end-to-end flow",
+    detailed_answer: "In request-driven integration, service A calls service B and waits for a response. This creates temporal coupling — both services must be up simultaneously — and spatial coupling, since A must know B's address.\n\nIn Event-Driven Architecture (EDA), a producer emits an immutable fact (an event) to a broker without knowing who will consume it. Consumers subscribe and react asynchronously. Neither side is aware of the other.\n\nKey characteristics:\n- Events are immutable facts about something that happened, named in past tense\n- The broker (Kafka, RabbitMQ, SNS/SQS, EventBridge) absorbs the event and handles delivery\n- Producers and consumers can scale, deploy, and fail independently\n- Multiple consumers can react to the same event without the producer changing\n\nThis delivers strong decoupling, natural audit trails (the event log), and resilience — a slow consumer doesn't block the producer. The cost is that you lose the simple mental model of a call stack: distributed tracing and correlation IDs become essential, and eventual consistency must be embraced by the business.",
+    key_points: [
+      "Events are immutable facts (past tense), not commands or requests",
+      "Broker completely decouples producers from consumers — neither knows the other",
+      "Temporal decoupling: producer and consumer need not be up at the same time",
+      "Multiple consumers can independently react to the same event",
+      "Trade-off: resilience and scale vs. harder observability and eventual consistency",
+      "Correlation IDs and distributed tracing are mandatory, not optional, in EDA"
+    ],
+    hint: "What happens to service A if service B is down — in request-driven vs event-driven? Walk through the coupling implications.",
+    common_trap: "Naming events as commands ('CreateOrder') rather than facts ('OrderCreated') — this reintroduces hidden coupling and breaks the open/closed principle for consumers.",
+    follow_up_questions: [
+      { text: "How do Kafka topics and consumer groups implement the pub/sub model?", type: "linked", links_to: "4.3.01", mini_answer: "Kafka topics are partitioned logs. Consumer groups share partitions so each message is processed by one member. Multiple groups each get every message, enabling fan-out without producer changes." },
+      { text: "When would you still choose request/response over EDA?", type: "inline", mini_answer: "When you need a synchronous result (user-facing APIs, queries), when the operation is naturally atomic, or when operational simplicity outweighs the resilience benefit — EDA adds broker infrastructure and eventual consistency complexity." },
+      { text: "How does choreography compare to orchestration in event-driven systems?", type: "linked", links_to: "1.3.04", mini_answer: "Choreography: each service reacts to events and emits its own — no central coordinator. Orchestration: a central saga/process manager drives the workflow. Choreography is more decoupled; orchestration is easier to reason about." }
+    ],
+    related: ["4.3.01", "4.3.02", "1.3.02", "1.3.04"],
+    has_diagram: true,
+    diagram: `Producer → [Broker/Topic] → Consumer A
+                          ↘ Consumer B
+                          ↘ Consumer C
+
+vs.
+
+Service A ──sync call──→ Service B (blocks until response)`,
+    has_code: false,
+    tags: ["eda", "event-driven", "messaging", "decoupling", "async", "architecture"]
+  },
+
+  {
+    id: "1.3.02",
+    section: 1,
+    subsection: "1.3",
+    level: "advanced",
+    question: "What are the three message delivery semantics and how do you achieve exactly-once processing in practice?",
+    quick_answer: "→ At-most-once: fire and forget — may lose messages\n→ At-least-once: retry on failure — may duplicate; most common default\n→ Exactly-once: hardest — requires idempotent consumers + transactional producers\n→ Kafka: transactional API + idempotent producer gives exactly-once within Kafka\n→ Cross-system: Outbox pattern is the reliable path — no distributed transaction needed",
+    detailed_answer: "Three delivery guarantees define the reliability contract between a broker and its consumers:\n\n**At-most-once:** The producer sends once. If the broker or consumer fails, the message is lost. Acceptable for metrics or non-critical notifications but not for business events.\n\n**At-least-once:** The producer retries until acknowledged. The consumer may receive duplicates. This is the default for Kafka, SQS, and most brokers. It's safe if — and only if — consumers are idempotent (processing the same message twice produces the same outcome).\n\n**Exactly-once:** The holy grail. True end-to-end exactly-once requires both the broker and the consumer side-effect to be transactional together.\n\nKafka's approach: enable `enable.idempotence=true` on the producer (sequence numbers deduplicate retries) and use the transactional API (`beginTransaction` / `commitTransaction`) so writes to one topic and reads from another are atomic. This gives exactly-once *within Kafka streams* (read-process-write).\n\nFor cross-system exactly-once (Kafka → database): the Outbox pattern is the standard answer. Write the event to an outbox table in the *same database transaction* as the business change. A separate relay process (Debezium CDC or a poller) publishes it to Kafka. Combined with idempotent consumers (deduplicate by event ID), you achieve effectively-once semantics without a distributed transaction.",
+    key_points: [
+      "At-least-once + idempotent consumer is the pragmatic path to safe exactly-once behaviour",
+      "Kafka's transactional producer/consumer API gives exactly-once within Kafka streams only",
+      "Cross-system exactly-once requires the Outbox pattern — write event and business data atomically",
+      "Idempotency key: store processed event IDs and reject duplicates on the consumer side",
+      "Exactly-once is a spectrum — broker-level, stream-processing level, and end-to-end are different",
+      "Saga pattern with compensating transactions handles failures when exactly-once is impossible"
+    ],
+    hint: "What does a consumer need to do if it receives the same event twice — and how do you ensure the business outcome is the same both times?",
+    common_trap: "Assuming Kafka's exactly-once setting covers the full pipeline — it only guarantees exactly-once within Kafka Streams read-process-write loops, not between Kafka and an external database or API.",
+    follow_up_questions: [
+      { text: "How does the Outbox pattern guarantee at-least-once delivery without a distributed transaction?", type: "linked", links_to: "4.3.05", mini_answer: "Write the event to an outbox table in the same DB transaction as the business mutation. A relay (CDC or poller) reads unpublished rows and publishes to Kafka. On consumer side, deduplicate by event ID. No 2PC needed." },
+      { text: "What makes a consumer truly idempotent?", type: "inline", mini_answer: "It must produce the same side-effect regardless of how many times it processes the same message. Techniques: upsert instead of insert, check-then-act with a processed-event-id table, or use natural idempotency (setting a value vs. incrementing it)." },
+      { text: "How does a Saga handle partial failure when exactly-once isn't achievable?", type: "linked", links_to: "4.5.02", mini_answer: "Saga breaks a distributed transaction into local transactions with compensating steps. If step N fails, compensations for steps N-1 down to 1 are executed to undo changes. Works with at-least-once delivery if compensations are idempotent." }
+    ],
+    related: ["4.3.05", "4.3.01", "4.5.02", "1.3.01"],
+    has_diagram: false,
+    has_code: true,
+    code_language: "java",
+    code_snippet: `// Kafka exactly-once producer (within Kafka Streams)
+Properties props = new Properties();
+props.put("enable.idempotence", "true");
+props.put("transactional.id", "order-service-tx-1");
+
+KafkaProducer<String, String> producer = new KafkaProducer<>(props);
+producer.initTransactions();
+
+try {
+    producer.beginTransaction();
+    producer.send(new ProducerRecord<>("orders", key, payload));
+    producer.send(new ProducerRecord<>("audit-log", key, auditPayload));
+    producer.commitTransaction();
+} catch (KafkaException e) {
+    producer.abortTransaction();
+}`,
+    tags: ["exactly-once", "at-least-once", "idempotency", "kafka", "outbox", "delivery-semantics"]
+  },
+
+  {
+    id: "1.3.03",
+    section: 1,
+    subsection: "1.3",
+    level: "intermediate",
+    question: "How does Event Sourcing differ from a standard event-driven architecture, and when should you use it?",
+    quick_answer: "→ EDA: events notify other services of state changes — source of truth is the DB\n→ Event Sourcing: events ARE the source of truth — state is derived by replaying them\n→ Event Sourcing gives full audit log, temporal queries, and easy event replay\n→ Cost: query complexity (need read models/CQRS), storage growth, schema evolution\n→ Use when: audit is a hard requirement, or you need point-in-time state reconstruction",
+    detailed_answer: "Event-Driven Architecture and Event Sourcing are complementary but distinct concepts that are often conflated.\n\n**Standard EDA:** services store their state in a database (the source of truth) and emit events as notifications when state changes. The event is a side-effect — you could delete the event log and the system would still function (state is in the DB).\n\n**Event Sourcing:** the event log *is* the primary store. The current state of an aggregate is reconstructed by replaying all events from the beginning (or from a snapshot). There is no separate 'current state' table — you derive it on demand.\n\nEvent Sourcing benefits:\n- Complete, immutable audit trail by design\n- Temporal queries: what was the order state at 14:32 on Tuesday?\n- Replay events to rebuild projections or fix bugs\n- Natural fit for CQRS — event log feeds read-model projections\n\nEvent Sourcing costs:\n- Queries are not trivial — you must build and maintain read-model projections (CQRS)\n- Schema evolution is hard: old events in the log must still be replayable with new code\n- Storage grows unbounded; snapshots are needed for performance\n- Higher cognitive overhead for teams not familiar with the pattern\n\nUse Event Sourcing when audit is a hard regulatory requirement, when you need point-in-time state, or when the business domain is inherently event-centric (trading, booking, workflow engines). For most CRUD-heavy services, standard EDA with a relational DB is the better trade-off.",
+    key_points: [
+      "EDA: DB is source of truth, events are notifications. Event Sourcing: events ARE the source of truth",
+      "Event Sourcing enables full audit trails and point-in-time state reconstruction",
+      "CQRS is almost always required alongside Event Sourcing to make reads practical",
+      "Snapshots are needed to avoid replaying thousands of events on every read",
+      "Schema evolution is the hardest operational challenge — old events must stay replayable",
+      "Don't apply Event Sourcing by default — it adds significant complexity for limited gain in CRUD services"
+    ],
+    hint: "If you deleted the event log in a standard EDA system, what breaks? If you deleted it in an Event Sourcing system, what breaks? That contrast reveals the core difference.",
+    common_trap: "Using Event Sourcing because 'we need an audit log' — a simpler audit table in the same DB gives you the log without the operational complexity of full Event Sourcing.",
+    follow_up_questions: [
+      { text: "How does CQRS work alongside Event Sourcing?", type: "linked", links_to: "4.5.04", mini_answer: "CQRS separates the write model (append events to log) from read models (projections built by consuming those events). Read models are denormalised for query efficiency. When the event log is replayed, projections are rebuilt." },
+      { text: "How do you handle schema evolution when old events must still be replayable?", type: "inline", mini_answer: "Use upcasters: functions that transform old event formats to the current schema at read time. Version your events explicitly. Never mutate historical events — append corrective events instead (a 'compensating event' pattern)." },
+      { text: "When does Event Sourcing become a liability?", type: "inline", mini_answer: "When the team isn't familiar with the pattern, when the domain is simple CRUD with no audit requirement, or when projections become stale and hard to rebuild. The complexity cost often outweighs the benefit." }
+    ],
+    related: ["4.5.04", "4.5.01", "1.3.01", "4.3.01"],
+    has_diagram: true,
+    diagram: `Standard EDA:
+  Service → writes state to DB → emits event to broker
+  DB is source of truth
+
+Event Sourcing:
+  Service → appends event to event log
+  Read model ← rebuilt by replaying events
+  Event log IS the source of truth`,
+    has_code: false,
+    tags: ["event-sourcing", "cqrs", "audit", "eda", "architecture", "ddd"]
+  },
+
+  {
+    id: "1.3.04",
+    section: 1,
+    subsection: "1.3",
+    level: "intermediate",
+    question: "Compare choreography and orchestration for coordinating multi-step workflows in an event-driven system.",
+    quick_answer: "→ Choreography: each service reacts to events and emits its own — no central coordinator\n→ Orchestration: a saga/process manager explicitly tells each service what to do\n→ Choreography: maximum decoupling, but workflow logic is implicit and scattered\n→ Orchestration: centralised visibility and control, but the orchestrator becomes a dependency\n→ Choice: choreography for simple flows; orchestration for complex multi-step or long-running sagas",
+    detailed_answer: "When multiple services must coordinate to complete a business process (e.g., place order → reserve inventory → charge payment → dispatch), you have two approaches.\n\n**Choreography:** Each service listens for events it cares about, does its work, and emits new events. There is no coordinator — the workflow emerges from the interactions. OrderService emits `OrderCreated` → InventoryService listens, reserves stock, emits `StockReserved` → PaymentService listens, charges, emits `PaymentCharged` → and so on.\n\nPros: services are fully decoupled, no single point of failure, easy to add new participants.\nCons: the workflow is implicit — it lives in event flows, not code. Debugging requires tracing across multiple services. When something goes wrong, understanding the full saga state requires correlating events across the log.\n\n**Orchestration:** A central process manager (saga orchestrator) explicitly calls or commands each service in sequence. It tracks state and handles failures by issuing compensating commands.\n\nPros: workflow logic is in one place, easy to visualise state, simpler to implement compensations.\nCons: the orchestrator is a central dependency, can become a bottleneck or single point of failure, and couples services to the orchestrator.\n\n**Decision rule:** use choreography for simple, well-understood flows with few participants. Use orchestration (sagas) for long-running processes, complex failure handling, or when workflow visibility is a first-class requirement.",
+    key_points: [
+      "Choreography: workflow emerges from event reactions — no central coordinator needed",
+      "Orchestration: a saga/process manager explicitly drives each step and tracks overall state",
+      "Choreography maximises decoupling but makes the overall workflow implicit and hard to trace",
+      "Orchestration centralises workflow logic — easier to reason about but adds a dependency",
+      "Compensating transactions are easier to implement in orchestration (orchestrator tracks what to undo)",
+      "Many real systems use both: choreography for simple notifications, orchestration for complex sagas"
+    ],
+    hint: "Draw out an order fulfilment flow both ways — where does the 'what happens next' logic live in each approach?",
+    common_trap: "Assuming choreography is always better because it's more decoupled — for complex multi-step flows with many failure modes, the invisible workflow becomes a debugging and operational nightmare.",
+    follow_up_questions: [
+      { text: "How does the Saga pattern implement compensating transactions in an orchestrated flow?", type: "linked", links_to: "4.5.02", mini_answer: "The orchestrator tracks each completed step. On failure, it issues compensating commands in reverse order — e.g. CancelReservation, RefundPayment. Compensations must themselves be idempotent. The saga is complete only when all steps or all compensations have run." },
+      { text: "How do you correlate events across services in a choreography-based flow?", type: "inline", mini_answer: "Assign a correlation ID (e.g. orderId) at the start of the flow and propagate it in every event. Log aggregation tools (ELK, Datadog) can then filter by correlation ID to reconstruct the full journey across services." },
+      { text: "What is the role of a process manager vs a simple saga orchestrator?", type: "inline", mini_answer: "A saga orchestrator manages a single flow instance. A process manager is more general: it reacts to events (not just completion/failure), can spawn sub-processes, and manages long-running state machines that span multiple independent sagas." }
+    ],
+    related: ["4.5.02", "1.3.01", "4.3.01", "1.2.04"],
+    has_diagram: true,
+    diagram: `Choreography:
+  OrderSvc──►OrderCreated──►InventorySvc──►StockReserved──►PaymentSvc
+  (each service reacts, no coordinator)
+
+Orchestration:
+  Orchestrator──►reserve(Inventory)
+              ◄──StockReserved
+              ──►charge(Payment)
+              ◄──PaymentCharged
+  (one actor drives the sequence)`,
+    has_code: false,
+    tags: ["choreography", "orchestration", "saga", "eda", "workflow", "distributed-systems"]
+  },
+
+  {
+    id: "1.3.05",
+    section: 1,
+    subsection: "1.3",
+    level: "advanced",
+    question: "How do you design event schemas for long-term evolution without breaking consumers?",
+    quick_answer: "→ Version your events explicitly — include a version field in every event envelope\n→ Follow additive-only changes: new optional fields are safe; never remove or rename\n→ Use a schema registry (Confluent, AWS Glue) to enforce compatibility rules\n→ Upcasters transform old versions to current schema at consumer read time\n→ Compatibility modes: backward (new code reads old data), forward (old code reads new data)",
+    detailed_answer: "Event schemas are long-lived contracts. Unlike API schemas where you can force clients to upgrade, events in the log may never be reprocessed with old code — which means schema evolution requires careful discipline.\n\n**Core principle: additive-only changes are safe.** Adding a new optional field with a default is backward-compatible. Removing, renaming, or changing the type of a field breaks consumers that depend on that field.\n\n**Schema Registry:** Tools like Confluent Schema Registry (Avro/JSON Schema/Protobuf) enforce compatibility rules at publish time. A producer cannot publish a schema that would break registered consumers — the registry rejects incompatible changes.\n\n**Compatibility modes:**\n- *Backward compatible:* new consumer code can read old events (most common requirement)\n- *Forward compatible:* old consumer code can read new events\n- *Full compatible:* both directions — most restrictive but safest for long-lived events\n\n**Versioning strategies:**\n1. Include a `version` field in the envelope. Consumers switch on version.\n2. Use separate topics per major version (`orders.v1`, `orders.v2`) and run dual-write during migration\n3. Upcasters: functions applied at read time to transform event_v1 → event_v2 before processing\n\n**Protobuf or Avro** are preferred over JSON for event schemas — field tags/IDs survive renames, and the schema is machine-readable for tooling.\n\nFor Event Sourcing systems this is even more critical: old events in the log must be replayable with current code years later — design schemas as if they're forever.",
+    key_points: [
+      "Additive-only changes (new optional fields) are the only safe evolution path",
+      "Schema registry enforces compatibility rules at publish time — catches breaks before production",
+      "Backward compatibility means new code reads old events; forward means old code reads new",
+      "Version the event envelope explicitly; use upcasters to transform old formats at read time",
+      "Protobuf/Avro are safer than JSON — field IDs survive renames, schema is machine-readable",
+      "For event-sourced systems, treat every schema as a permanent contract — old events never disappear"
+    ],
+    hint: "What happens to a consumer if you remove a field it depends on from an event — and how does a schema registry prevent that from reaching production?",
+    common_trap: "Treating event schema changes like REST API changes — REST clients can be forced to upgrade; event log consumers may need to replay years of historical data with any version of the schema.",
+    follow_up_questions: [
+      { text: "How does Protobuf handle backward-compatible schema changes vs JSON?", type: "inline", mini_answer: "Protobuf uses numeric field tags, not names. Renaming a field in code doesn't change the wire format (same tag number). JSON uses string names — rename breaks all consumers. Protobuf also has explicit optional/required semantics and generates typed code." },
+      { text: "What is a dead-letter queue strategy for schema mismatches at runtime?", type: "linked", links_to: "4.3.02", mini_answer: "Consumers that fail to deserialise an event (schema mismatch) route it to a DLQ. Ops can inspect, fix the consumer schema, and replay from DLQ. This avoids blocking the main partition while giving visibility into schema drift." },
+      { text: "How do you migrate producers and consumers across a breaking event schema change safely?", type: "inline", mini_answer: "Dual-write: producer writes to both v1 and v2 topics. Migrate consumers to v2 one by one. Once all consumers are on v2, stop writing to v1. This gives zero-downtime migration without coordinated deploys." }
+    ],
+    related: ["4.3.01", "4.3.02", "1.3.03", "1.3.01"],
+    has_diagram: false,
+    has_code: true,
+    code_language: "protobuf",
+    code_snippet: `// Safe evolution: add optional field with default
+message OrderPlaced {
+  string order_id    = 1;  // never change tag numbers
+  string customer_id = 2;
+  double total_amount = 3;
+  // v2 addition — safe, optional, has default
+  optional string promo_code = 4;
+}`,
+    tags: ["schema-evolution", "schema-registry", "avro", "protobuf", "event-versioning", "backward-compatibility"]
+  },
+
+  {
+    id: "1.3.06",
+    section: 1,
+    subsection: "1.3",
+    level: "advanced",
+    question: "How do you guarantee message ordering in a distributed event-driven system, and what are the trade-offs?",
+    quick_answer: "→ Kafka: ordering guaranteed within a partition — use the same partition key for related events\n→ Global ordering across all partitions is not possible without sacrificing throughput\n→ Partition key = natural ordering unit (orderId, userId, accountId)\n→ Hot partitions: high-cardinality keys prevent skew\n→ Consumer group: one consumer per partition ensures in-order processing within that partition",
+    detailed_answer: "Ordering in distributed messaging is one of the most misunderstood guarantees. The key insight: **you can have total ordering or scalability — rarely both.**\n\n**Kafka's ordering model:** Kafka guarantees order within a single partition. Messages with the same partition key always land in the same partition, so events for a given entity (e.g., all events for `orderId=123`) arrive in the order they were produced.\n\nA consumer in a consumer group is assigned one or more whole partitions. Within its partitions, it processes messages in order. Two consumers in the same group never process the same partition simultaneously.\n\n**Choosing the partition key:** the natural ordering unit is the entity whose events must be ordered. Use `orderId` for order events, `accountId` for account events. This ensures all state changes for one entity are sequenced on one partition, read by one consumer at a time.\n\n**Hot partition problem:** if your key has low cardinality (e.g., region with 3 values), most traffic funnels to 3 partitions. Use high-cardinality keys or a compound key (`region:customerId`) to distribute load.\n\n**Cross-partition ordering:** Kafka cannot guarantee ordering across partitions. If you need a global sequence (rare in practice), you need a single partition (no parallelism) or an external sequencer (e.g., a sequence table in the DB, or a Zookeeper-based monotonic counter).\n\n**Consumer lag:** ordering only helps if the consumer processes one message at a time per partition. Parallel processing within a consumer (e.g., a thread pool) re-introduces out-of-order processing — you need to re-sequence by offset if you do this.",
+    key_points: [
+      "Kafka guarantees ordering within a partition — use the entity ID as the partition key",
+      "One consumer per partition per group ensures in-order processing without competition",
+      "Global ordering across all partitions requires a single partition — eliminates horizontal scale",
+      "Hot partitions arise from low-cardinality keys — choose keys with high cardinality",
+      "Parallel processing within a consumer (thread pools) breaks per-partition ordering guarantees",
+      "Design for 'ordering where it matters' not global ordering — identify the natural ordering unit"
+    ],
+    hint: "What is the smallest unit of data that must be processed in order? That tells you what the partition key should be.",
+    common_trap: "Assuming Kafka guarantees global ordering across all topics or all partitions — it only guarantees within a single partition. Architects who skip this end up with race conditions on shared state.",
+    follow_up_questions: [
+      { text: "How does message ordering interact with consumer group scaling?", type: "inline", mini_answer: "Adding consumers to a group up to the partition count adds parallelism without breaking ordering — each partition is still processed by one consumer. Beyond the partition count, extra consumers sit idle. Rebalancing temporarily pauses processing." },
+      { text: "How do you handle out-of-order event arrival in a consumer that can't control partition assignment?", type: "inline", mini_answer: "Use an event timestamp or sequence number in the payload. Buffer events in a small in-memory or Redis window, sort by sequence, and process in order. Set a maximum wait time and process whatever is available after the timeout." },
+      { text: "How does Kafka compare to SQS FIFO queues for ordering guarantees?", type: "linked", links_to: "4.3.01", mini_answer: "SQS FIFO guarantees ordering within a message group ID (similar to Kafka partition key) with a max 300 msg/s per group. Kafka partitions have no throughput cap. SQS FIFO is simpler operationally; Kafka scales higher and retains messages for replay." }
+    ],
+    related: ["4.3.01", "4.3.10", "1.3.01", "1.3.02"],
+    has_diagram: true,
+    diagram: `Partition key = orderId
+
+orderId=A → Partition 0 → Consumer 1  (A events in order)
+orderId=B → Partition 1 → Consumer 2  (B events in order)
+orderId=C → Partition 0 → Consumer 1  (C events in order, interleaved with A)
+
+⚠ No ordering guarantee between Partition 0 and Partition 1`,
+    has_code: false,
+    tags: ["ordering", "kafka", "partitioning", "consumer-groups", "messaging", "distributed-systems"]
+  },
+
 ];
