@@ -197,9 +197,13 @@ const KEYSTONE_DATA = {
     ...(typeof SECTION_12_QUESTIONS !== 'undefined'
         ? SECTION_12_QUESTIONS : []),
 
+    // Section 1: System Design & Architecture
+    ...(typeof SECTION_1_QUESTIONS !== 'undefined'
+        ? SECTION_1_QUESTIONS : []),
+
     // ── ADD NEW SECTIONS BELOW ──────────────
     // Copy the pattern above for each new section
-    // section_1.js  → SECTION_1_QUESTIONS
+    // section_1.js  → SECTION_1_QUESTIONS  ✅
     // section_2.js  → SECTION_2_QUESTIONS
     // section_3.js  → SECTION_3_QUESTIONS
     // section_5.js  → SECTION_5_QUESTIONS

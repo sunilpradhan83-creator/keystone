@@ -52,8 +52,9 @@ index.html loads section files BEFORE data.js.
 5. Get user sign-off at https://keystone-lake.vercel.app
 6. Report: previous total → questions added → new total
 
-**For question additions (active session shortcut):**
-Claude writes batch to section file → validate → user reviews in IDE → deploy. No interruptions.
+**For question additions:**
+Claude writes batch to section file → validate → user reviews in IDE → next subsection.
+**Deploy only when full section is complete.** Never deploy mid-section.
 
 ---
 

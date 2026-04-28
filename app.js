@@ -665,9 +665,14 @@
       const relSection = buildCardSection('related-section q-section collapsible-section collapsed', `
         <div class="card-label">🔗 Related</div>
         <div class="related-pills">${
-          q.related.map(id =>
-            `<button class="related-pill" data-qid="${escHtml(id)}" aria-label="Go to question ${escHtml(id)}">${escHtml(id)}</button>`
-          ).join('')
+          (() => {
+            const allIds = new Set(KEYSTONE_DATA.questions.map(q => q.id));
+            return q.related.map(id =>
+              allIds.has(id)
+                ? `<button class="related-pill" data-qid="${escHtml(id)}" aria-label="Go to question ${escHtml(id)}">${escHtml(id)}</button>`
+                : `<span class="related-pill related-pill-disabled" title="Not yet available" aria-label="${escHtml(id)} — coming soon">${escHtml(id)}</span>`
+            ).join('');
+          })()
         }</div>`);
       relSection.id = 'related-section';
       answerBlock.appendChild(relSection);
@@ -720,23 +725,49 @@
   }
 
   function buildFollowUpHTML(followUps) {
+    const allIds = new Set(KEYSTONE_DATA.questions.map(q => q.id));
+
+    function comingSoonLabel(linksTo) {
+      if (!linksTo) return 'Card coming soon';
+      const secId  = parseInt(linksTo.split('.')[0]);
+      const subId  = linksTo.split('.').slice(0, 2).join('.');
+      const sec    = KEYSTONE_DATA.sections.find(s => s.id === secId);
+      const sub    = KEYSTONE_DATA.subsections.find(s => s.id === subId);
+      const secName = sec  ? sec.title  : `Section ${secId}`;
+      const subName = sub  ? sub.title  : `${subId}`;
+      return `Card coming soon in ${escHtml(secName)} — ${escHtml(subName)}`;
+    }
+
     const items = followUps.map(fu => {
-      if (fu.type === 'linked') {
-        return `
-          <div class="followup-linked" data-qid="${escHtml(fu.links_to)}" role="button" tabindex="0" aria-label="Open follow-up: ${escHtml(fu.text)}">
-            <span class="followup-text">→ ${escHtml(fu.text)}</span>
-            <span class="followup-open-badge">Open →</span>
-          </div>`;
-      } else {
-        return `
-          <div class="followup-inline" role="button" aria-expanded="false">
-            <div class="followup-inline-header" tabindex="0" aria-label="${escHtml(fu.text)}">
-              <span class="followup-arrow-icon">▶</span>
-              <span class="followup-text">${escHtml(fu.text)}</span>
-            </div>
-            <div class="followup-mini-answer">${escHtml(fu.mini_answer || '')}</div>
-          </div>`;
-      }
+      const hasTarget  = fu.links_to && allIds.has(fu.links_to);
+      const hasLink    = !!fu.links_to;
+      const openBtn    = hasLink
+        ? hasTarget
+          ? `<button class="followup-open-btn" data-qid="${escHtml(fu.links_to)}" aria-label="Open card ${escHtml(fu.links_to)}">Open →</button>`
+          : `<span  class="followup-open-btn followup-open-disabled" aria-label="Card not yet available">Open →</span>`
+        : '';
+      const comingSoon = (!hasTarget)
+        ? `<div class="followup-coming-soon">${comingSoonLabel(fu.links_to)}</div>`
+        : '';
+
+      return `
+        <div class="followup-item" aria-expanded="false">
+          <div class="followup-header" tabindex="0" aria-label="${escHtml(fu.text)}">
+            <span class="followup-arrow-icon">▶</span>
+            <span class="followup-text">${escHtml(fu.text)}</span>
+            ${openBtn}
+          </div>
+          <div class="followup-body">
+            <div class="followup-mini-answer">${
+              fu.mini_answer
+                ? escHtml(fu.mini_answer)
+                : hasTarget
+                  ? '<span class="followup-open-hint">Open the card for the full answer →</span>'
+                  : ''
+            }</div>
+            ${comingSoon}
+          </div>
+        </div>`;
     }).join('');
 
     return `
@@ -815,22 +846,11 @@
       });
     }
 
-    // Follow-up linked
-    content.querySelectorAll('.followup-linked').forEach(el => {
-      const qid = el.dataset.qid;
-      const handler = () => {
-        state.navStack.push(q.id);
-        openQuestion(qid, { push: false });
-      };
-      el.addEventListener('click', handler);
-      el.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); }
-      });
-    });
+    // Follow-up items — unified handler
+    content.querySelectorAll('.followup-item').forEach(el => {
+      const header = el.querySelector('.followup-header');
 
-    // Follow-up inline
-    content.querySelectorAll('.followup-inline').forEach(el => {
-      const header = el.querySelector('.followup-inline-header');
+      // Header toggles expand/collapse
       header.addEventListener('click', () => {
         const expanded = el.classList.toggle('expanded');
         el.setAttribute('aria-expanded', expanded);
@@ -838,6 +858,16 @@
       header.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); header.click(); }
       });
+
+      // Open button navigates without collapsing
+      const openBtn = el.querySelector('.followup-open-btn[data-qid]');
+      if (openBtn) {
+        openBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          state.navStack.push(q.id);
+          openQuestion(openBtn.dataset.qid, { push: false });
+        });
+      }
     });
 
     // Related pills

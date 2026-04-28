@@ -97,9 +97,9 @@ allQuestions.forEach(q => {
         console.error(`❌ LINK: ${q.id} — linked follow-up missing links_to`);
         errors++;
       } else if (!allIds.has(fu.links_to)) {
-        console.warn(`⚠️  BROKEN LINK: ${q.id} → ${fu.links_to} (not found yet)`);
+        console.error(`❌ BROKEN LINK: ${q.id} → ${fu.links_to} — target missing. Change type to "inline" until that section is written`);
         brokenLinks.push({ from: q.id, to: fu.links_to });
-        warnings++;
+        errors++;
       }
     }
     if (fu.type === 'inline' && !fu.mini_answer) {

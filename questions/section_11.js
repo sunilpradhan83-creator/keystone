@@ -30,8 +30,8 @@ const SECTION_11_QUESTIONS = [
     follow_up_questions: [
       {
         text: "How do you handle custom aliases and prevent conflicts?",
-        type: "linked",
-        links_to: "11.1.02"
+        type: "inline",
+        mini_answer: "Store aliases in the same table with a unique constraint on short_code. On insert, check if the requested alias exists — if so, return a conflict error. Use a reserved words list (api, admin, login, health) blocked at the application layer. Rate-limit alias creation per user to prevent enumeration attacks."
       },
       {
         text: "How would you add geographic routing to serve redirects from the nearest region?",
