@@ -1935,11 +1935,400 @@ public class StripeAdapter implements PaymentGateway {
     has_code: false,
     tags: ["choreography", "orchestration", "saga",
            "event-driven", "integration", "trade-offs"]
-  }
-  
-  // ══════════════════════════════════════════
-  // SUBSECTION 4.5 — DATA CONSISTENCY PATTERNS
-  // Coming in Batch 5
-  // ══════════════════════════════════════════
+  },
 
+   // ══════════════════════════════════════════
+  // SUBSECTION 4.5 — DATA CONSISTENCY PATTERNS
+  // ══════════════════════════════════════════
+ 
+  {
+    id: "4.5.01",
+    section: 4,
+    subsection: "4.5",
+    level: "intermediate",
+    question: "What is the CAP theorem? How does it guide database and architecture decisions?",
+    quick_answer: "→ CAP: a distributed system can guarantee only 2 of 3: Consistency, Availability, Partition Tolerance\n→ Partition Tolerance is non-negotiable in real networks — network failures WILL happen\n→ Real choice: CP (consistency + partition) vs AP (availability + partition)\n→ CP: reject requests when partitioned — consistent but unavailable (Zookeeper, HBase)\n→ AP: serve stale data when partitioned — available but eventually consistent (Cassandra, DynamoDB)\n→ Decision: does your use case tolerate stale data or does it require strong consistency?",
+    detailed_answer: "CAP Theorem (Brewer's Theorem) states that a distributed system can only guarantee two of three properties simultaneously.\n\nConsistency (C):\nEvery read receives the most recent write or an error. All nodes see the same data at the same time. Like a single-node database — any read reflects the latest committed write.\n\nAvailability (A):\nEvery request receives a response (not an error), though it may not be the most recent data. System always responds, even if some nodes are down.\n\nPartition Tolerance (P):\nSystem continues operating even when network partitions occur (messages dropped or delayed between nodes).\n\nWhy P is non-negotiable:\nNetwork partitions happen in real distributed systems — hardware failures, network switches, data centre connectivity issues. A system that stops working during a network partition is not a distributed system. Therefore the real choice is between C and A during a partition.\n\nCP systems (Consistency + Partition Tolerance):\n→ During partition: reject requests to ensure consistency\n→ Examples: Zookeeper, HBase, MongoDB (with strong read concern)\n→ Use when: financial transactions, inventory counts, anything where stale data causes real harm\n\nAP systems (Availability + Partition Tolerance):\n→ During partition: serve possibly stale data to remain available\n→ Examples: Cassandra, DynamoDB, CouchDB\n→ Use when: shopping cart, social media feed, recommendations — stale is acceptable\n\nBeyond CAP — PACELC:\nEven without partition, there is a latency vs consistency trade-off. PACELC extends CAP: during Partition choose A or C; Else (normal operation) choose Latency or Consistency.",
+    key_points: [
+      "CAP: choose 2 of 3 — Consistency, Availability, Partition Tolerance",
+      "Partition Tolerance is mandatory in real networks — real choice is CP vs AP",
+      "CP: consistent but may become unavailable during partition",
+      "AP: always available but may serve stale data during partition",
+      "Choose CP for: financial data, inventory counts, anything where stale = harm",
+      "Choose AP for: shopping carts, feeds, recommendations — stale is tolerable"
+    ],
+    hint: "Your bank account balance. During a network partition, would you rather: A) the ATM refuses to give you money (CP — consistent), or B) the ATM gives you money but your balance might be wrong for a few minutes (AP — available)?",
+    common_trap: "Treating CAP as a database selection framework only. CAP applies to your entire distributed architecture — service-to-service calls, caching layers, consensus mechanisms. A CP database inside an AP architecture is still an AP system overall.",
+    follow_up_questions: [
+      {
+        text: "What is eventual consistency and how do you design for it?",
+        type: "linked",
+        links_to: "4.5.02"
+      },
+      {
+        text: "What is PACELC and how does it extend CAP?",
+        type: "inline",
+        mini_answer: "PACELC: during Partition → choose Availability or Consistency (same as CAP). Else (normal operation) → choose Latency or Consistency. Example: DynamoDB is AP/EL — available during partition, low latency (not strongly consistent) during normal operation. Spanner is CP/EC — consistent during partition, consistent (higher latency) during normal operation. PACELC is more practical than CAP for day-to-day database selection."
+      }
+    ],
+    related: ["4.5.02", "2.1.01", "2.6.01"],
+    has_diagram: true,
+    diagram: `CAP THEOREM — Pick 2 of 3
+ 
+              Consistency
+                  △
+                 /|\
+                / | \
+               /  |  \
+         CP   /   |   \  CA
+             /    |    \
+            /     |     \
+           /      |      \
+          ▼───────┴───────▼
+     Partition          Availability
+     Tolerance
+          AP
+ 
+CA → Traditional RDBMS (single node)
+     Not truly distributed
+ 
+CP → Zookeeper, HBase, Spanner
+     Consistent but may reject during partition
+ 
+AP → Cassandra, DynamoDB, CouchDB
+     Always available, eventually consistent
+ 
+Real networks always have partitions
+→ CA is only theoretical
+→ Real choice: CP or AP`,
+    has_code: false,
+    tags: ["CAP", "consistency", "availability",
+           "partition-tolerance", "distributed-systems"]
+  },
+ 
+  {
+    id: "4.5.02",
+    section: 4,
+    subsection: "4.5",
+    level: "intermediate",
+    question: "What is eventual consistency? How do you design systems that tolerate it?",
+    quick_answer: "→ Eventual consistency: all replicas will converge to the same value — eventually, not immediately\n→ Read after write may return stale data for a short window\n→ Design for it: idempotent operations, version vectors, last-write-wins or merge strategies\n→ UI patterns: optimistic updates (show result immediately, reconcile later)\n→ Not suitable for: financial balances, inventory counts, anything requiring read-your-writes\n→ Suitable for: social feeds, caches, recommendations, analytics",
+    detailed_answer: "Eventual consistency is a consistency model where replicas are guaranteed to converge to the same value given no new updates — but reads during the convergence window may return stale data.\n\nWhy it exists:\nStrongly consistent distributed systems require coordination between replicas on every write — this adds latency. Eventual consistency removes this coordination, enabling low-latency writes by accepting a brief inconsistency window.\n\nDesigning for eventual consistency:\n\n1. Idempotent operations:\n   Operations must be safe to apply multiple times.\n   Increment by 1 is not idempotent — use set-absolute-value instead.\n\n2. Conflict resolution strategies:\n   → Last-Write-Wins (LWW): most recent timestamp wins. Simple but loses data on concurrent writes.\n   → Vector Clocks: track causality, detect concurrent writes, allow merge.\n   → CRDTs: data structures designed to merge automatically without conflicts.\n\n3. Read-your-writes consistency (session consistency):\n   After a write, route reads to the same replica or wait for replication.\n   User sees their own writes immediately. Other users may see stale briefly.\n\n4. Optimistic UI:\n   Show the user the result of their action immediately (assume success).\n   Reconcile with server state when replication completes.\n   Common in mobile apps and collaborative tools.\n\n5. Version numbers / ETags:\n   Include version in responses. Client sends version on update.\n   Server rejects if version is stale — client must refresh and retry.\n\nWhen to avoid eventual consistency:\n→ Account balances: stale read + concurrent write = negative balance\n→ Inventory: stale read = overselling\n→ Any operation where two users acting on stale data simultaneously causes harm",
+    key_points: [
+      "Eventual consistency: replicas converge eventually — brief stale read window",
+      "Design with: idempotent operations, conflict resolution, version numbers",
+      "Last-write-wins: simple but loses concurrent writes — use carefully",
+      "Session consistency: user sees own writes — others may see stale briefly",
+      "Optimistic UI: show result immediately, reconcile with server async",
+      "Avoid for: financial balances, inventory counts, read-your-writes critical paths"
+    ],
+    hint: "You post a comment on social media. Your friend refreshes immediately and does not see it. 2 seconds later it appears. Was that a bug? That is eventual consistency working as designed. When would it be a bug?",
+    common_trap: "Using eventual consistency for operations that require read-your-writes. User updates their email address, immediately logs out and back in — their old email is used for authentication because the replica has not caught up. Design read-your-writes paths to hit the primary replica.",
+    follow_up_questions: [
+      {
+        text: "What are CRDTs and when are they useful?",
+        type: "inline",
+        mini_answer: "CRDTs (Conflict-free Replicated Data Types): data structures that can be merged automatically without conflicts regardless of order. Examples: G-Counter (grow-only counter, merge = max per node), OR-Set (add/remove set with unique tags), LWW-Register (last-write-wins with timestamp). Used in: collaborative editing (Google Docs), distributed counters, shopping carts (Amazon's Dynamo). Key property: any two replicas can be merged to produce the same result regardless of operation order."
+      }
+    ],
+    related: ["4.5.01", "2.6.01", "4.2.10"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["eventual-consistency", "CAP", "distributed-systems",
+           "CRDT", "conflict-resolution"]
+  },
+ 
+  {
+    id: "4.5.03",
+    section: 4,
+    subsection: "4.5",
+    level: "advanced",
+    question: "What is the Saga pattern's consistency model? How does it differ from ACID?",
+    quick_answer: "→ Saga provides ACD without Isolation — BASE consistency not ACID\n→ ACID Isolation: concurrent transactions do not see each other's intermediate state\n→ Saga lacks isolation: other transactions can read partially-completed saga state\n→ Countermeasures: semantic lock (flag in-progress records), commutative updates, pessimistic view\n→ Design sagas so intermediate states are valid business states — not corrupted states\n→ Saga trades isolation for availability and partition tolerance",
+    detailed_answer: "ACID transactions provide four guarantees. Sagas provide three of the four — they deliberately sacrifice Isolation.\n\nACID vs Saga:\n→ Atomicity: Saga provides — via compensating transactions (not rollback)\n→ Consistency: Saga provides — business invariants maintained\n→ Isolation: Saga does NOT provide — other transactions see intermediate state\n→ Durability: Saga provides — each local transaction commits durably\n\nThe Isolation problem:\nDuring a Saga that has completed steps 1-3 of 5:\n→ Another transaction can read the state after step 3\n→ This state may look anomalous — order reserved but not yet confirmed\n→ That other transaction might make decisions based on incomplete state\n\nCountermeasures for lost isolation:\n\n1. Semantic Lock:\n   Add a status field: PENDING, CONFIRMED, FAILED.\n   While saga is in progress: status = PENDING.\n   Other transactions: reject or skip PENDING records.\n   Similar to a distributed application-level lock.\n\n2. Commutative Updates:\n   Design updates so order does not matter.\n   Credit balance + debit balance = same result regardless of order.\n   Eliminates one class of isolation anomaly.\n\n3. Pessimistic View:\n   Reorder saga steps so risky reads happen last.\n   Example: read available inventory LAST (after payment) not first.\n   Reduces window of anomalous reads.\n\n4. Re-read Value:\n   Re-read data immediately before using it in a decision.\n   Reduces (not eliminates) stale read window.\n\nBASE vs ACID:\n→ ACID: strong guarantees, serialisable, used in traditional RDBMS\n→ BASE: Basically Available, Soft state, Eventually consistent\n→ Saga is BASE — correct model for microservices",
+    key_points: [
+      "Saga provides ACD but NOT Isolation — BASE not ACID",
+      "Intermediate saga state is visible to other transactions",
+      "Semantic lock: PENDING status prevents other transactions acting on in-progress records",
+      "Design intermediate states as valid business states — not corrupted",
+      "Commutative updates eliminate order-dependent anomalies",
+      "Saga trades isolation for availability — correct trade-off for distributed systems"
+    ],
+    hint: "Saga step 2 of 5 completes: inventory reserved but payment not yet charged. Another service reads inventory to check availability. It sees reduced inventory but no corresponding confirmed order. How does it know this is in-progress vs a bug?",
+    common_trap: "Designing a Saga where intermediate states look like data corruption to other services. If step 2 of 5 results in an anomalous state that other services cannot distinguish from an error state, you need a semantic lock or status field to communicate 'this is intentionally in-progress'.",
+    follow_up_questions: [
+      {
+        text: "What is the Saga pattern?",
+        type: "linked",
+        links_to: "4.1.01"
+      }
+    ],
+    related: ["4.1.01", "4.5.01", "2.2.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["saga", "ACID", "BASE", "consistency",
+           "isolation", "distributed-transactions"]
+  },
+ 
+  {
+    id: "4.5.04",
+    section: 4,
+    subsection: "4.5",
+    level: "advanced",
+    question: "What is optimistic vs pessimistic locking? When do you use each?",
+    quick_answer: "→ Pessimistic: lock the row before reading — no concurrent updates possible (SELECT FOR UPDATE)\n→ Optimistic: no lock on read — check version on write, reject if changed\n→ Pessimistic: use when conflicts are frequent and costly (bank transfers, inventory decrement)\n→ Optimistic: use when conflicts are rare (user profile updates, product catalog edits)\n→ Optimistic: higher throughput, lower contention — but must handle retry on conflict\n→ Pessimistic: guaranteed no conflict — but reduces throughput under high concurrency",
+    detailed_answer: "Both patterns solve the lost update problem: two transactions read the same row, both modify it, one overwrites the other's changes.\n\nPessimistic Locking:\n→ Acquire lock when reading: SELECT * FROM orders WHERE id=1 FOR UPDATE\n→ Other transactions block trying to read the same row\n→ Lock released on transaction commit/rollback\n→ Guarantees: no concurrent modification possible\n→ Cost: lock contention, potential deadlocks, reduced throughput\n→ Use when: conflict probability is high, cost of conflict resolution is high\n\nOptimistic Locking:\n→ Read row including version column (no lock)\n→ Modify in memory\n→ Write: UPDATE orders SET status=?, version=version+1 WHERE id=? AND version=?\n→ If version mismatch (another transaction updated first): 0 rows affected → retry\n→ Application detects and handles conflict\n→ Cost: retry logic required, wasted work on conflict\n→ Use when: conflict probability is low, throughput matters\n\nDeadlock risk with pessimistic locking:\n→ Transaction A locks row 1, wants row 2\n→ Transaction B locks row 2, wants row 1\n→ Deadlock — both wait forever\n→ Prevention: always acquire locks in same order\n→ Detection: DB detects and kills one transaction\n\nJPA/Hibernate implementation:\n→ Optimistic: @Version field on entity — JPA handles version check automatically\n→ Pessimistic: @Lock(LockModeType.PESSIMISTIC_WRITE) on query",
+    key_points: [
+      "Pessimistic: lock on read — blocks concurrent access, guarantees no conflict",
+      "Optimistic: no lock — check version on write, retry if conflict detected",
+      "Pessimistic for: high conflict probability, costly conflicts (financial)",
+      "Optimistic for: low conflict probability, high throughput needed",
+      "Optimistic requires retry logic — must handle OptimisticLockException",
+      "Pessimistic risks deadlock — always acquire locks in consistent order"
+    ],
+    hint: "1000 users simultaneously add the last item to their cart (inventory decrement). With optimistic locking: 999 transactions detect conflict and retry. With pessimistic locking: 999 transactions queue and wait. Which is better here?",
+    common_trap: "Using optimistic locking for high-contention scenarios. If 100 transactions all try to update the same row simultaneously, 99 will fail and retry — potentially repeatedly. Under high contention, optimistic locking creates a retry storm. Use pessimistic locking when conflicts are expected to be frequent.",
+    follow_up_questions: [
+      {
+        text: "How do you implement optimistic locking in Spring Data JPA?",
+        type: "inline",
+        mini_answer: "@Version annotation on a Long or Integer field in your entity. Spring Data JPA automatically includes version check in UPDATE WHERE clause. On conflict: throws OptimisticLockException. Handle with @Retryable or manual retry loop. Include version in your DTO for API endpoints that update data — client sends back the version it read, server rejects if stale. Never auto-increment version manually — JPA handles it."
+      }
+    ],
+    related: ["4.5.03", "4.6.01", "2.2.01"],
+    has_diagram: false,
+    has_code: true,
+    code_language: "java",
+    code_snippet: `// Optimistic Locking — JPA
+@Entity
+public class InventoryItem {
+    @Id
+    private Long id;
+    private int quantity;
+ 
+    @Version                    // ← JPA manages this
+    private Long version;       // ← auto-incremented on update
+}
+ 
+// What JPA generates:
+// UPDATE inventory_item
+// SET quantity=?, version=version+1
+// WHERE id=? AND version=?  ← conflict check
+// If 0 rows updated → OptimisticLockException
+ 
+// Pessimistic Locking — JPA
+@Repository
+public interface InventoryRepo
+        extends JpaRepository<InventoryItem, Long> {
+ 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT i FROM InventoryItem i WHERE i.id=:id")
+    InventoryItem findByIdWithLock(@Param("id") Long id);
+    // SELECT ... FOR UPDATE
+}`,
+    tags: ["optimistic-locking", "pessimistic-locking",
+           "concurrency", "JPA", "database", "version"]
+  },
+ 
+  {
+    id: "4.5.05",
+    section: 4,
+    subsection: "4.5",
+    level: "advanced",
+    question: "What is the Saga choreography consistency problem and how does the Pivot Transaction solve it?",
+    quick_answer: "→ Pivot transaction: the point of no return in a Saga — steps before are reversible, steps after are not\n→ Before pivot: compensatable transactions (can undo — reserve inventory, authorise payment)\n→ After pivot: retriable transactions (must succeed — ship order, send confirmation)\n→ Design pivot = the commit point for the business transaction\n→ Retry (not compensate) steps after pivot — they must eventually succeed\n→ Choose pivot carefully: shipping an item is irreversible — that is the natural pivot",
+    detailed_answer: "The Pivot Transaction pattern provides structure to Saga design by identifying the point of no return.\n\nBefore the Pivot (Compensatable Transactions):\n→ Each step can be undone via a compensating transaction\n→ Examples: reserve inventory (can release), authorise payment (can cancel auth), create order record (can delete)\n→ These steps run forward; if any fails, we compensate backward\n\nThe Pivot Transaction:\n→ The 'commit' of the business transaction\n→ Once this step completes successfully, the saga will run to completion\n→ Example: capture (charge) payment — once money is taken, we are committed to fulfilling\n→ Cannot be compensated — only retried or manually resolved\n\nAfter the Pivot (Retriable Transactions):\n→ These steps must eventually succeed — retry until they do\n→ Examples: ship order, send confirmation email, update analytics\n→ If shipping fails: retry, not compensate — customer paid, order must ship\n→ Design these to be idempotent — safe to retry multiple times\n\nChoosing the pivot:\n→ Ask: after this step, is there a business obligation we cannot undo?\n→ Payment capture → yes, pivot here\n→ Shipping → yes, but shipping is the retriable step after pivot\n→ Usually the pivot is around financial commitment or physical action\n\nPractical impact on saga design:\n→ Steps before pivot: must have compensation logic\n→ Steps after pivot: must be idempotent and retryable\n→ Pivot itself: handle failure carefully — if it fails, compensate all previous steps",
+    key_points: [
+      "Pivot transaction: the point of no return — before = compensatable, after = retriable",
+      "Before pivot: can undo — reserve inventory, authorise payment",
+      "After pivot: must succeed — ship order, send email (retry, not compensate)",
+      "Payment capture is the typical pivot — money taken = business committed",
+      "After-pivot steps must be idempotent — retry is the failure strategy",
+      "Choose pivot = where business obligation becomes irreversible"
+    ],
+    hint: "Order saga: reserve inventory → authorise payment → CAPTURE payment → ship → email. You capture payment successfully. Shipping service is down. Do you refund the customer (compensate) or keep retrying shipping (retry)?",
+    common_trap: "Not identifying the pivot transaction and trying to compensate steps that should be retried. If you issue a refund every time shipping fails transiently, you have compensated when you should have retried — customer gets money back but order was going to ship successfully on the next attempt.",
+    follow_up_questions: [
+      {
+        text: "What is the Saga pattern?",
+        type: "linked",
+        links_to: "4.1.01"
+      }
+    ],
+    related: ["4.1.01", "4.1.02", "4.5.03"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["saga", "pivot-transaction", "compensatable",
+           "retriable", "distributed-transactions", "consistency"]
+  },
+ 
+  // ══════════════════════════════════════════
+  // SUBSECTION 4.6 — CONCURRENCY PATTERNS
+  // ══════════════════════════════════════════
+ 
+  {
+    id: "4.6.01",
+    section: 4,
+    subsection: "4.6",
+    level: "intermediate",
+    question: "What is the Mutex and Semaphore pattern? How are they used in distributed systems?",
+    quick_answer: "→ Mutex: exclusive lock — only one holder at a time (binary semaphore)\n→ Semaphore: counting lock — N holders allowed simultaneously\n→ Distributed mutex: Redis SETNX or Redlock — prevents concurrent execution across instances\n→ Use distributed mutex for: scheduled jobs (run only once), critical sections across pods\n→ Use semaphore for: connection pool limits, API rate limiting, bulkhead implementation\n→ Always set TTL on distributed locks — prevent deadlock if holder crashes",
+    detailed_answer: "In a single process, mutexes and semaphores are OS primitives. In distributed systems, these must be implemented over shared infrastructure (Redis, ZooKeeper, database).\n\nMutex (Mutual Exclusion):\n→ Only one process holds the lock at a time\n→ Use case: cron job must run on exactly one instance (not all 10 pods)\n→ Redis implementation: SET lock_key unique_id NX PX 30000\n  → NX: only set if not exists\n  → PX 30000: TTL 30 seconds (auto-release if holder crashes)\n  → unique_id: ensures only holder can release it\n\nSemaphore:\n→ N processes can hold concurrently\n→ Use case: limit concurrent calls to an external API (quota: 10 concurrent)\n→ Redis implementation: INCR counter → if > N → reject; DECR on completion\n\nRedlock (Redis distributed lock):\n→ Locks across multiple independent Redis instances\n→ Requires majority (3 of 5) to acquire — tolerates Redis node failures\n→ More complex than single-Redis lock\n→ Use when Redis is single point of failure for lock correctness\n\nCritical: always set a TTL on distributed locks\n→ If lock holder crashes: lock released automatically after TTL\n→ Without TTL: lock held forever — deadlock for all other processes\n→ TTL must be longer than expected critical section duration\n→ Extend TTL if critical section takes longer than expected (lock renewal)\n\nAlternative: Leader Election\n→ One instance is elected leader, only leader runs critical tasks\n→ Kubernetes: leader election built into controller framework\n→ More robust than ad-hoc locking for long-running exclusive tasks",
+    key_points: [
+      "Distributed mutex: Redis SETNX — one holder across all instances",
+      "Distributed semaphore: Redis counter — N concurrent holders",
+      "Always set TTL on distributed locks — prevents permanent deadlock on crash",
+      "TTL must exceed critical section duration — extend if needed",
+      "Redlock: multi-Redis for fault-tolerant locking",
+      "Leader election: better than locking for long-running exclusive tasks"
+    ],
+    hint: "You have 10 pods running a cron job that sends monthly invoices. Without a distributed mutex, all 10 pods send invoices simultaneously — 10x duplicate emails. The mutex ensures only one pod runs the job.",
+    common_trap: "Setting TTL shorter than the critical section. If sending 10,000 emails takes 5 minutes but TTL is 30 seconds, another instance acquires the lock after 30 seconds and starts sending again — duplicates. Set TTL generously and implement lock renewal.",
+    follow_up_questions: [
+      {
+        text: "How do you implement a distributed lock in Redis?",
+        type: "inline",
+        mini_answer: "Acquire: SET lock:{resource} {uuid} NX PX {ttl_ms} — returns OK or nil. Only proceed if OK. Release: Lua script: if GET lock:{resource} == uuid then DEL lock:{resource} end — atomic check-and-delete. Lua ensures you only release your own lock. Lock renewal: PEXPIRE lock:{resource} {ttl_ms} while still holding. Use Redisson or spring-integration-redis for production — they handle edge cases."
+      }
+    ],
+    related: ["4.2.03", "4.5.04", "6.3.01"],
+    has_diagram: false,
+    has_code: true,
+    code_language: "java",
+    code_snippet: `// Distributed Lock with Redis
+@Service
+public class DistributedLockService {
+ 
+    @Autowired
+    private StringRedisTemplate redis;
+ 
+    public boolean acquireLock(String resource,
+            String lockId, long ttlMs) {
+        Boolean acquired = redis.opsForValue()
+            .setIfAbsent(
+                "lock:" + resource,
+                lockId,
+                Duration.ofMillis(ttlMs)
+            );
+        return Boolean.TRUE.equals(acquired);
+    }
+ 
+    public void releaseLock(String resource,
+            String lockId) {
+        // Lua script: atomic check-and-delete
+        // Only release if WE hold the lock
+        String script =
+            "if redis.call('get', KEYS[1]) == ARGV[1] " +
+            "then return redis.call('del', KEYS[1]) " +
+            "else return 0 end";
+ 
+        redis.execute(
+            new DefaultRedisScript<>(script, Long.class),
+            List.of("lock:" + resource),
+            lockId
+        );
+    }
+}`,
+    tags: ["mutex", "semaphore", "distributed-lock",
+           "redis", "concurrency", "patterns"]
+  },
+ 
+  {
+    id: "4.6.02",
+    section: 4,
+    subsection: "4.6",
+    level: "intermediate",
+    question: "What is the Leader Election pattern? When do you use it over distributed locking?",
+    quick_answer: "→ Leader election: one instance elected as leader — only leader performs exclusive tasks\n→ Better than per-task locking for: long-running tasks, many exclusive operations, frequent scheduling\n→ Leader performs: cron jobs, partition ownership, primary replication\n→ Kubernetes: built-in leader election via lease API (used by controllers)\n→ Follower standby: monitors leader health, ready to take over\n→ Failover: if leader crashes, election triggers — new leader elected within seconds",
+    detailed_answer: "Leader Election is a higher-level pattern than distributed locking. Instead of acquiring a lock per critical operation, one instance is continuously elected as leader and holds that role until it crashes or relinquishes it.\n\nWhy leader election over per-task locking:\n→ Long-running tasks: a 30-minute job cannot hold a Redis lock without complex renewal\n→ Many exclusive operations: acquire/release a lock 1000 times per minute = overhead\n→ Cleaner model: leader identity is stable, followers know who to route to\n\nKubernetes Leader Election:\n→ Built into client-go library used by all controllers\n→ Uses Lease API object in Kubernetes\n→ Each candidate tries to create/renew the Lease\n→ Whoever holds the Lease is the leader\n→ Lease has TTL — if leader does not renew, it expires → new election\n→ Used by: kube-scheduler, kube-controller-manager, custom operators\n\nApplication-level leader election:\n→ ZooKeeper: ephemeral nodes + watch — classic implementation\n→ etcd: lease-based election — used by Kubernetes itself\n→ Redis: SETNX + TTL + renewal loop — simpler but less robust\n\nLeader responsibilities:\n→ Run scheduled jobs (exactly once across cluster)\n→ Own a set of Kafka partitions (Kafka coordinator is itself a leader)\n→ Primary in primary-replica DB setup\n→ Write-to-DB while replicas serve reads\n\nFailover:\n→ Leader crashes: TTL expires, others detect missing heartbeat\n→ New election: all candidates race to become leader\n→ New leader elected: seconds to tens of seconds depending on TTL",
+    key_points: [
+      "Leader election: one instance holds exclusive role continuously",
+      "Better than per-task locking for long-running or high-frequency exclusive work",
+      "Kubernetes: Lease API — built-in, used by all controllers",
+      "Leader renews lease continuously — expiry triggers new election",
+      "Failover: TTL expiry → election → new leader in seconds",
+      "ZooKeeper/etcd: production-grade; Redis: simpler, less fault-tolerant"
+    ],
+    hint: "You have a 1-hour batch job that must run on exactly one pod. Distributed lock approach: acquire lock for 1 hour (risky). Leader election approach: elect a leader that runs the job — leader renewal handles the 1-hour duration naturally. Which is cleaner?",
+    common_trap: "Assuming leader election is instant. There is always a window between leader failure and new leader election (the TTL duration). Design your system to tolerate this gap — no critical operation should assume a leader is always available with zero gap.",
+    follow_up_questions: [
+      {
+        text: "How does ZooKeeper implement leader election?",
+        type: "inline",
+        mini_answer: "Each candidate creates an ephemeral sequential node under /election/ — e.g. /election/candidate-0000000001. Ephemeral: node deleted automatically if creator's session expires (crashes). Sequential: each gets a unique monotonically increasing number. Smallest number = current leader. Others watch the node just before them in sequence. If watched node deleted: that candidate is now the leader (or watches new predecessor). This creates a queue-based election with no thundering herd on leader failure."
+      }
+    ],
+    related: ["4.6.01", "6.3.01", "3.2.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["leader-election", "zookeeper", "kubernetes",
+           "concurrency", "distributed-systems", "high-availability"]
+  },
+ 
+  {
+    id: "4.6.03",
+    section: 4,
+    subsection: "4.6",
+    level: "advanced",
+    question: "What is the Scheduler Agent Supervisor pattern? How does it coordinate long-running distributed tasks?",
+    quick_answer: "→ Three roles: Scheduler (dispatches tasks), Agent (executes tasks), Supervisor (monitors + recovers)\n→ Scheduler: breaks work into steps, tracks state, assigns to agents\n→ Agent: executes assigned step, reports completion or failure\n→ Supervisor: detects stuck/failed agents, reassigns tasks, handles timeout\n→ Enables: long-running distributed workflows that survive partial failures\n→ Examples: Azure Durable Functions, Temporal workflows, AWS Step Functions",
+    detailed_answer: "The Scheduler Agent Supervisor pattern coordinates long-running tasks that span multiple services and may take minutes or hours to complete.\n\nThree components:\n\nScheduler:\n→ Receives high-level task (process order)\n→ Breaks it into steps with dependencies\n→ Persists step state in durable storage\n→ Dispatches steps to available Agents via message queue\n→ Tracks overall progress\n\nAgent:\n→ Picks up step from queue\n→ Executes the step (calls a service, processes data)\n→ Reports result back to Scheduler\n→ Stateless — any Agent can execute any step\n→ Implements idempotency — step may be assigned to multiple Agents if first times out\n\nSupervisor:\n→ Monitors step execution: did Agent complete within expected time?\n→ Detects: Agent crash, network failure, timeout\n→ Action: mark step as failed, reassign to different Agent\n→ Implements retry policy per step type\n→ Escalates to DLQ or human workflow after max retries\n\nDurable execution:\n→ All state persisted — system survives complete restart\n→ On recovery: Scheduler reads state, continues from last completed step\n→ No work lost — Agents are idempotent so safe to re-execute\n\nModern implementations:\n→ Temporal: workflow as code, durable execution, built-in retry/timeout\n→ AWS Step Functions: visual workflow, serverless, managed\n→ Azure Durable Functions: serverless, C#/JS/Python\n→ These abstract away the Scheduler/Agent/Supervisor plumbing",
+    key_points: [
+      "Scheduler: dispatches tasks, tracks state, durable",
+      "Agent: executes steps, stateless, idempotent",
+      "Supervisor: monitors execution, detects failure, reassigns",
+      "Durable execution: all state persisted — survives complete restart",
+      "Agents are idempotent — safe to reassign on timeout",
+      "Temporal/Step Functions: production-ready implementations of this pattern"
+    ],
+    hint: "An order processing workflow takes 20 minutes: inventory check → payment → fraud check → fulfillment → shipping → email. Any step can fail. You need the workflow to resume from the failed step after recovery. Which pattern coordinates this?",
+    common_trap: "Implementing Scheduler Agent Supervisor from scratch when Temporal or Step Functions exist. This pattern has many edge cases (split-brain, exactly-once execution, timeout vs failure). Use a battle-tested implementation unless you have very specific requirements.",
+    follow_up_questions: [
+      {
+        text: "How does Temporal differ from Step Functions?",
+        type: "inline",
+        mini_answer: "Temporal: code-first (workflow as regular code with awaits), any language, self-hosted or cloud, strong local development story, replay-based durable execution. Step Functions: config-first (JSON/YAML state machine), AWS-native, fully managed, visual editor, pay-per-transition. Temporal: better for complex workflows with rich business logic. Step Functions: better for AWS-native architectures wanting zero ops. Both implement the Scheduler-Agent-Supervisor pattern under the hood."
+      }
+    ],
+    related: ["4.1.01", "4.6.01", "4.3.01"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["scheduler-agent-supervisor", "temporal",
+           "step-functions", "workflow", "distributed-systems",
+           "long-running-tasks"]
+  },
+ 
+  {
+    id: "4.6.04",
+    section: 4,
+    subsection: "4.6",
+    level: "advanced",
+    question: "What is the Competing Consumers with poison pill detection pattern?",
+    quick_answer: "→ Poison pill: message that always causes consumer to crash or fail\n→ Without detection: message retried forever, consumer crashes in loop, queue blocked\n→ Detection: track attempt count per message — exceed threshold → DLQ\n→ Consumer crash loop: pod restarts, picks up same message, crashes again\n→ Kubernetes: CrashLoopBackOff is the symptom of poison pill without DLQ\n→ Defence: max delivery count + DLQ + alerting on DLQ depth",
+    detailed_answer: "A poison pill message causes consumer failure on every attempt. It exploits the retry mechanism — designed for transient failures — against permanent failures.\n\nHow poison pills occur:\n→ Schema change: producer sends new field consumer code cannot handle (NPE)\n→ Data corruption: invalid data that passes validation but crashes processing\n→ Edge case: message with combination of values that hits unhandled code path\n→ Dependency: message requires a resource that no longer exists (deleted entity)\n\nWithout protection:\n→ Consumer receives poison pill\n→ Consumer throws exception\n→ Message returned to queue (negative acknowledgment)\n→ Consumer receives same message again\n→ Consumer crashes again\n→ Pod restarts (Kubernetes CrashLoopBackOff)\n→ On restart: same message → same crash\n→ All other messages blocked behind the poison pill\n→ Queue depth grows\n\nDefence layers:\n\n1. Max delivery count:\n   Kafka: track in consumer code or use DLQ library\n   SQS: maxReceiveCount on redrive policy → auto-moves to DLQ after N failures\n   RabbitMQ: x-death header tracks redelivery count\n\n2. Dead Letter Queue:\n   After max attempts: move to DLQ\n   Other messages continue processing normally\n   Alert on DLQ depth immediately\n\n3. Poison pill quarantine:\n   Do not just DLQ — log full context: message content, stack trace, consumer version\n   Makes root cause analysis possible\n\n4. Consumer resilience:\n   Wrap processing in try-catch-all\n   Log full message + error before negative ack\n   Never let unhandled exception propagate to Kafka consumer loop\n   Unhandled exception pauses the entire consumer",
+    key_points: [
+      "Poison pill: message that always fails — exploits retry mechanism",
+      "Symptom: Kubernetes CrashLoopBackOff + stalled queue depth",
+      "Defence: max delivery count → DLQ after N failures",
+      "SQS: maxReceiveCount + redrive policy handles this automatically",
+      "Log full message + stack trace to DLQ — root cause analysis critical",
+      "Wrap all consumer processing in try-catch — never let exception kill consumer loop"
+    ],
+    hint: "Consumer pod keeps restarting (CrashLoopBackOff). Queue depth is growing. Every restart: same crash within 2 seconds. What is happening and what is the immediate fix?",
+    common_trap: "Catching exceptions in the consumer but silently swallowing them without moving the message to DLQ. The message stays in the queue and is redelivered forever (Kafka) or until visibility timeout expires (SQS). Always DLQ after max retries — never swallow and re-queue indefinitely.",
+    follow_up_questions: [
+      {
+        text: "What is a Dead Letter Queue?",
+        type: "linked",
+        links_to: "4.3.02"
+      }
+    ],
+    related: ["4.3.02", "4.3.04", "4.2.08"],
+    has_diagram: false,
+    has_code: false,
+    tags: ["poison-pill", "DLQ", "competing-consumers",
+           "kafka", "resilience", "messaging"]
+  }
+
+  
 ];
