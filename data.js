@@ -201,6 +201,10 @@ const KEYSTONE_DATA = {
     ...(typeof SECTION_1_QUESTIONS !== 'undefined'
         ? SECTION_1_QUESTIONS : []),
 
+    // Section 2: Data & Storage
+    ...(typeof SECTION_2_QUESTIONS !== 'undefined'
+        ? SECTION_2_QUESTIONS : []),
+
     // ── ADD NEW SECTIONS BELOW ──────────────
     // Copy the pattern above for each new section
     // section_1.js  → SECTION_1_QUESTIONS  ✅
