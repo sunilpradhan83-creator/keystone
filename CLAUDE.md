@@ -134,12 +134,12 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 | 12 | Behavioural & Soft Skills | | 1 stub | ⬜ |
 | 5 | Cloud & Infrastructure | | 0 | ⬜ |
 | 6 | DevOps & Platform Engineering | | 0 | ⬜ |
-| 3 | Non-Functional Requirements | | 0 | ⬜ |
+| 3 | Non-Functional Requirements | | 23 | ✅ deployed |
 | 8 | Data Engineering & ML | | 0 | ⬜ |
 | 9 | AI & GenAI Architecture | | 0 | ⬜ |
 | 10 | Governance & Eng Leadership | | 0 | ⬜ |
 
-**Total so far: 168 / 362 questions**
+**Total so far: 191 / 362 questions**
 
 ### Section detail — subsections & question targets
 
@@ -162,9 +162,14 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 2.7 CQRS & Event Sourcing (4q) IDs: 2.7.01-2.7.04
 2.8 Data Partitioning & Sharding (4q) IDs: 2.8.01-2.8.04
 
-**Section 3 — Non-Functional Requirements (~23q)**
-3.1 Scalability | 3.2 Availability & Reliability | 3.3 Fault Tolerance | 3.4 Performance & Latency
-3.5 Security Requirements | 3.6 Observability | 3.7 Disaster Recovery
+**Section 3 — Non-Functional Requirements (23q) ✅ DEPLOYED**
+3.1 Scalability (4q) IDs: 3.1.01-3.1.04
+3.2 Availability & Reliability (3q) IDs: 3.2.01-3.2.03
+3.3 Fault Tolerance & Resilience (4q) IDs: 3.3.01-3.3.04
+3.4 Performance & Latency (3q) IDs: 3.4.01-3.4.03
+3.5 Security Requirements (3q) IDs: 3.5.01-3.5.03
+3.6 Observability Requirements (3q) IDs: 3.6.01-3.6.03
+3.7 Disaster Recovery (3q) IDs: 3.7.01-3.7.03
 
 **Section 4 — Design Patterns (~48q) ✅ DEPLOYED**
 4.1 Microservice Patterns (12q) IDs: 4.1.01-4.1.12

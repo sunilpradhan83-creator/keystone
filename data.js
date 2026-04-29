@@ -209,6 +209,10 @@ const KEYSTONE_DATA = {
     ...(typeof SECTION_3_QUESTIONS !== 'undefined'
         ? SECTION_3_QUESTIONS : []),
 
+    // Section 5: Cloud & Infrastructure
+    ...(typeof SECTION_5_QUESTIONS !== 'undefined'
+        ? SECTION_5_QUESTIONS : []),
+
     // ── ADD NEW SECTIONS BELOW ──────────────
     // Copy the pattern above for each new section
     // section_1.js  → SECTION_1_QUESTIONS  ✅
