@@ -132,14 +132,14 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 | 2 | Data & Storage | | 36 | ✅ deployed |
 | 11 | Real-World Scenarios | | 1 stub | ⬜ |
 | 12 | Behavioural & Soft Skills | | 1 stub | ⬜ |
-| 5 | Cloud & Infrastructure | | 0 | ⬜ |
+| 5 | Cloud & Infrastructure | | 27 | ✅ deployed |
 | 6 | DevOps & Platform Engineering | | 0 | ⬜ |
 | 3 | Non-Functional Requirements | | 23 | ✅ deployed |
 | 8 | Data Engineering & ML | | 0 | ⬜ |
 | 9 | AI & GenAI Architecture | | 0 | ⬜ |
 | 10 | Governance & Eng Leadership | | 0 | ⬜ |
 
-**Total so far: 191 / 362 questions**
+**Total so far: 218 / 362 questions**
 
 ### Section detail — subsections & question targets
 
@@ -179,9 +179,15 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 4.5 Data Consistency (5q) IDs: 4.5.01-4.5.05
 4.6 Concurrency Patterns (4q) IDs: 4.6.01-4.6.04
 
-**Section 5 — Cloud & Infrastructure (~29q)**
-5.1 Cloud Provider Concepts | 5.2 Compute | 5.3 Networking | 5.4 Storage
-5.5 Managed Services | 5.6 Multi-Cloud & Hybrid | 5.7 Cost Optimisation | 5.8 IaC
+**Section 5 — Cloud & Infrastructure (27q) ✅ DEPLOYED**
+5.1 Cloud Provider Concepts (4q) IDs: 5.1.01-5.1.04
+5.2 Compute (4q) IDs: 5.2.01-5.2.04
+5.3 Networking (4q) IDs: 5.3.01-5.3.04
+5.4 Storage (3q) IDs: 5.4.01-5.4.03
+5.5 Managed Services (3q) IDs: 5.5.01-5.5.03
+5.6 Multi-Cloud & Hybrid (2q) IDs: 5.6.01-5.6.02
+5.7 Cost Optimisation (3q) IDs: 5.7.01-5.7.03
+5.8 Infrastructure as Code (4q) IDs: 5.8.01-5.8.04
 
 **Section 6 — DevOps & Platform Engineering (~24q)**
 6.1 CI/CD | 6.2 Containerisation | 6.3 Container Orchestration | 6.4 Deployment Strategies

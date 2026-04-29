@@ -213,6 +213,10 @@ const KEYSTONE_DATA = {
     ...(typeof SECTION_5_QUESTIONS !== 'undefined'
         ? SECTION_5_QUESTIONS : []),
 
+    // Section 6: DevOps & Platform Engineering
+    ...(typeof SECTION_6_QUESTIONS !== 'undefined'
+        ? SECTION_6_QUESTIONS : []),
+
     // ── ADD NEW SECTIONS BELOW ──────────────
     // Copy the pattern above for each new section
     // section_1.js  → SECTION_1_QUESTIONS  ✅
