@@ -217,6 +217,10 @@ const KEYSTONE_DATA = {
     ...(typeof SECTION_6_QUESTIONS !== 'undefined'
         ? SECTION_6_QUESTIONS : []),
 
+    // Section 8: Data Engineering & ML
+    ...(typeof SECTION_8_QUESTIONS !== 'undefined'
+        ? SECTION_8_QUESTIONS : []),
+
     // ── ADD NEW SECTIONS BELOW ──────────────
     // Copy the pattern above for each new section
     // section_1.js  → SECTION_1_QUESTIONS  ✅

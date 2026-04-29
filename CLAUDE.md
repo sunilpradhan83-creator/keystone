@@ -133,13 +133,13 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 | 11 | Real-World Scenarios | | 1 stub | ⬜ |
 | 12 | Behavioural & Soft Skills | | 1 stub | ⬜ |
 | 5 | Cloud & Infrastructure | | 27 | ✅ deployed |
-| 6 | DevOps & Platform Engineering | | 0 | ⬜ |
+| 6 | DevOps & Platform Engineering | | 20 | ✅ deployed |
 | 3 | Non-Functional Requirements | | 23 | ✅ deployed |
 | 8 | Data Engineering & ML | | 0 | ⬜ |
 | 9 | AI & GenAI Architecture | | 0 | ⬜ |
 | 10 | Governance & Eng Leadership | | 0 | ⬜ |
 
-**Total so far: 218 / 362 questions**
+**Total so far: 238 / 362 questions**
 
 ### Section detail — subsections & question targets
 
@@ -189,9 +189,15 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 5.7 Cost Optimisation (3q) IDs: 5.7.01-5.7.03
 5.8 Infrastructure as Code (4q) IDs: 5.8.01-5.8.04
 
-**Section 6 — DevOps & Platform Engineering (~24q)**
-6.1 CI/CD | 6.2 Containerisation | 6.3 Container Orchestration | 6.4 Deployment Strategies
-6.5 SRE | 6.6 Platform Engineering | 6.7 DevSecOps | 6.8 Observability Implementation
+**Section 6 — DevOps & Platform Engineering (20q) ✅ DEPLOYED**
+6.1 CI/CD Pipeline Design (4q) IDs: 6.1.01-6.1.04
+6.2 Containerisation (3q) IDs: 6.2.01-6.2.03
+6.3 Container Orchestration (4q) IDs: 6.3.01-6.3.04
+6.4 Deployment Strategies (2q) IDs: 6.4.01-6.4.02
+6.5 SRE (2q) IDs: 6.5.01-6.5.02
+6.6 Platform Engineering (2q) IDs: 6.6.01-6.6.02
+6.7 DevSecOps (1q) IDs: 6.7.01-6.7.01
+6.8 Observability Implementation (2q) IDs: 6.8.01-6.8.02
 
 **Section 7 — Security Architecture (~36q) ✅ DEPLOYED**
 7.1 Authentication & Authorisation (8q) IDs: 7.1.01-7.1.08
