@@ -129,7 +129,7 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 | 4 | Design Patterns | | 52 | ✅ deployed |
 | 7 | Security Architecture | | 36 | ✅ deployed |
 | 1 | System Design & Architecture | | 42 | ✅ deployed |
-| 2 | Data & Storage | | 19 (in progress) | 🔄 writing |
+| 2 | Data & Storage | | 36 | ✅ deployed |
 | 11 | Real-World Scenarios | | 1 stub | ⬜ |
 | 12 | Behavioural & Soft Skills | | 1 stub | ⬜ |
 | 5 | Cloud & Infrastructure | | 0 | ⬜ |
@@ -139,7 +139,7 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 | 9 | AI & GenAI Architecture | | 0 | ⬜ |
 | 10 | Governance & Eng Leadership | | 0 | ⬜ |
 
-**Total so far: 151 / 362 questions** (130 deployed + 19 written, not yet deployed)
+**Total so far: 168 / 362 questions**
 
 ### Section detail — subsections & question targets
 
@@ -152,17 +152,15 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 1.6 Real-Time Systems Design (6q) IDs: 1.6.01-1.6.06
 1.7 Domain-Driven Design (6q) IDs: 1.7.01-1.7.06
 
-**Section 2 — Data & Storage (~36q) 🔄 IN PROGRESS — NOT YET DEPLOYED**
-2.1 DB Selection & Trade-offs (5q) IDs: 2.1.01-2.1.05 ✅ written
-2.2 Relational DBs (4q) IDs: 2.2.01-2.2.04 ✅ written
-2.3 NoSQL (5q) IDs: 2.3.01-2.3.05 ✅ written
-2.4 Caching Strategies (5q) IDs: 2.4.01-2.4.05 ✅ written
-2.5 Data Modeling (4q) ⬜ next
-2.6 Data Replication & Consistency (5q) ⬜ — 2.6.01 MUST be about data replication (cross-link target from 4.1.05, 4.1.12)
-2.7 CQRS & Event Sourcing (4q) ⬜ — 2.7.01 is inline follow-up target from 2.2.03 (upgrade to linked when written)
-2.8 Partitioning & Sharding (4q) ⬜ — 2.8.01 is inline follow-up target from 2.1.04 (upgrade to linked when written)
-
-**Pending fix after 2.4 written:** upgrade 2.3.03 follow-up (Redis → caching patterns) from inline to linked → 2.4.01
+**Section 2 — Data & Storage (36q) ✅ DEPLOYED**
+2.1 DB Selection & Trade-offs (5q) IDs: 2.1.01-2.1.05
+2.2 Relational Databases (4q) IDs: 2.2.01-2.2.04
+2.3 NoSQL Databases (5q) IDs: 2.3.01-2.3.05
+2.4 Caching Strategies (5q) IDs: 2.4.01-2.4.05
+2.5 Data Modeling (4q) IDs: 2.5.01-2.5.04
+2.6 Data Replication & Consistency (5q) IDs: 2.6.01-2.6.05
+2.7 CQRS & Event Sourcing (4q) IDs: 2.7.01-2.7.04
+2.8 Data Partitioning & Sharding (4q) IDs: 2.8.01-2.8.04
 
 **Section 3 — Non-Functional Requirements (~23q)**
 3.1 Scalability | 3.2 Availability & Reliability | 3.3 Fault Tolerance | 3.4 Performance & Latency

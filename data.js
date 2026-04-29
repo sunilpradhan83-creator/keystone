@@ -205,6 +205,10 @@ const KEYSTONE_DATA = {
     ...(typeof SECTION_2_QUESTIONS !== 'undefined'
         ? SECTION_2_QUESTIONS : []),
 
+    // Section 3: Non-Functional Requirements
+    ...(typeof SECTION_3_QUESTIONS !== 'undefined'
+        ? SECTION_3_QUESTIONS : []),
+
     // ── ADD NEW SECTIONS BELOW ──────────────
     // Copy the pattern above for each new section
     // section_1.js  → SECTION_1_QUESTIONS  ✅
