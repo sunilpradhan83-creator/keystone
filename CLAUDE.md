@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # KEYSTONE — Claude Working Context
 
 ## What this project is
@@ -17,26 +21,26 @@ Owner: Sunny — preparing for Technical Architect / EM interviews.
 keystone/
 ├── index.html, app.js, style.css, data.js   ← app (served to browser)
 ├── questions/                                ← question data (one file per section)
-│   ├── section_4.js
-│   ├── section_7.js
-│   ├── section_11.js
-│   └── section_12.js
+│   ├── section_1.js … section_12.js         ← all 12 sections present
 ├── tools/                                    ← dev tooling (never served)
 │   ├── validate_questions.js
 │   ├── deploy.sh
-│   └── add_section.sh
+│   ├── add_section.sh
+│   ├── serve.sh
+│   └── test_mode_logic.js
 ├── package.json                              ← jsdom dev dependency (committed)
 └── CLAUDE.md                                 ← this file
 ```
 
 - `node_modules/`, `package-lock.json` → gitignored (reproducible via `npm install`)
 - `.claude/` → gitignored
+- `@playwright/test` is in devDependencies but **must not be used** — Playwright requires system libs unavailable in WSL without sudo. Use jsdom for all DOM logic tests.
 
-data.js assembles all sections:
+data.js assembles all sections with a safe-spread pattern:
 ```javascript
 questions: [
-  ...(typeof SECTION_4_QUESTIONS !== 'undefined' ? SECTION_4_QUESTIONS : []),
-  ...(typeof SECTION_7_QUESTIONS !== 'undefined' ? SECTION_7_QUESTIONS : []),
+  ...(typeof SECTION_1_QUESTIONS !== 'undefined' ? SECTION_1_QUESTIONS : []),
+  // ... repeat for sections 2–12
 ]
 ```
 index.html loads section files BEFORE data.js.
@@ -137,10 +141,10 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 | 6 | DevOps & Platform Engineering | | 20 | ✅ deployed |
 | 3 | Non-Functional Requirements | | 23 | ✅ deployed |
 | 8 | Data Engineering & ML | | 24 | ✅ deployed |
-| 9 | AI & GenAI Architecture | | 0 | ⬜ |
-| 10 | Governance & Eng Leadership | | 0 | ⬜ |
+| 9 | AI & GenAI Architecture | | 26 | ✅ deployed |
+| 10 | Governance & Eng Leadership | | 21 | ✅ deployed |
 
-**Total so far: 262 / 362 questions**
+**Total so far: 309 / 362 questions**
 
 ### Section detail — subsections & question targets
 
@@ -172,7 +176,7 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 3.6 Observability Requirements (3q) IDs: 3.6.01-3.6.03
 3.7 Disaster Recovery (3q) IDs: 3.7.01-3.7.03
 
-**Section 4 — Design Patterns (~48q) ✅ DEPLOYED**
+**Section 4 — Design Patterns (52q) ✅ DEPLOYED**
 4.1 Microservice Patterns (12q) IDs: 4.1.01-4.1.12
 4.2 Resilience Patterns (12q) IDs: 4.2.01-4.2.12
 4.3 Messaging Patterns (10q) IDs: 4.3.01-4.3.10
@@ -216,13 +220,23 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 8.4 ML Platform Design (5q) IDs: 8.4.01-8.4.05
 8.5 Data Quality & Observability (4q) IDs: 8.5.01-8.5.04
 
-**Section 9 — AI & GenAI Architecture (~26q)**
-9.0 LLM Foundations | 9.1 LLM Integration Patterns | 9.2 RAG Architecture
-9.3 Agentic Systems | 9.4 AI Gateway & Model Routing | 9.5 AI Security & Guardrails | 9.6 Vector DBs
+**Section 9 — AI & GenAI Architecture (26q) ✅ DEPLOYED**
+9.0 LLM Foundations (4q) IDs: 9.0.01-9.0.04
+9.1 LLM Integration Patterns (5q) IDs: 9.1.01-9.1.05
+9.2 RAG Architecture (4q) IDs: 9.2.01-9.2.04
+9.3 Agentic Systems (4q) IDs: 9.3.01-9.3.04
+9.4 AI Gateway & Model Routing (3q) IDs: 9.4.01-9.4.03
+9.5 AI Security & Guardrails (3q) IDs: 9.5.01-9.5.03
+9.6 Vector DBs (3q) IDs: 9.6.01-9.6.03
 
-**Section 10 — Governance & Eng Leadership (~21q)**
-10.1 ADRs | 10.2 Tech Debt | 10.3 Build vs Buy | 10.4 Stakeholder Communication
-10.5 Team Structuring | 10.6 Architecture Review | 10.7 Engineering Principles
+**Section 10 — Governance & Eng Leadership (21q) ✅ DEPLOYED**
+10.1 ADRs (3q) IDs: 10.1.01-10.1.03
+10.2 Tech Debt (3q) IDs: 10.2.01-10.2.03
+10.3 Build vs Buy (3q) IDs: 10.3.01-10.3.03
+10.4 Stakeholder Communication (3q) IDs: 10.4.01-10.4.03
+10.5 Team Structuring (3q) IDs: 10.5.01-10.5.03
+10.6 Architecture Review (3q) IDs: 10.6.01-10.6.03
+10.7 Engineering Principles (3q) IDs: 10.7.01-10.7.03
 
 **Section 11 — Real-World Scenarios (~31q)**
 11.1 Design from Scratch | 11.2 Scale Existing System | 11.3 Migrate Legacy | 11.4 Diagnose Incidents
@@ -233,25 +247,6 @@ Rule: each question must draw from minimum 3 sections
 12.4 Stakeholder Management | 12.5 Mentorship | 12.6 Prioritisation | 12.7 Ownership
 
 ---
-
-## Existing cross-section links (deployed → not-yet-deployed)
-
-These render as inline until target section is deployed, then auto-upgrade to linked navigation.
-
-| From | To | Topic |
-|---|---|---|
-| 4.1.04, 4.1.07 | 1.2.01 | Strangler Fig / DB per Service → Microservices |
-| 4.3.01 | 1.3.01 | Messaging → EDA |
-| 4.3.05 | 1.3.02 | Outbox vs Kafka Tx → Exactly-once |
-| 4.1.05, 4.1.12 | 2.6.01 | Migration Tx / 2PC → Data Replication |
-| 4.5.01 | 2.1.01 | CAP → DB Selection |
-| 4.2.01, 4.2.03, 4.3.02 | 3.3.01 | Circuit Breaker / Bulkhead / DLQ → Fault Tolerance |
-| 4.1.11, 4.3.04 | 5.2.01 | Service Discovery / Competing Consumers → Compute |
-| 4.1.06 | 6.3.01 | Sidecar → Container Orchestration |
-| 4.4.04 | 6.4.01 | Strangler Fig Integration → Deployment |
-| 4.4.07 | 7.3.01 | Retry + Idempotency → API Security |
-| 4.4.01 | 7.1.01 | BFF → Auth |
-| 4.3.03, 4.3.06, 4.3.10 | 8.2.01 | Kafka / Message Ordering / Back-pressure → Stream Processing |
 
 ---
 
