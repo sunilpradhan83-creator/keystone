@@ -7,6 +7,7 @@ Owner: Sunny — preparing for Technical Architect / EM interviews.
 
 - **Production URL:** https://keystone-lake.vercel.app
 - **GitHub:** https://github.com/sunilpradhan83-creator/keystone
+- **Local dev:** `npm start` (runs `npx serve . -l 3000`) → http://localhost:3000
 
 ---
 
@@ -135,11 +136,11 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 | 5 | Cloud & Infrastructure | | 27 | ✅ deployed |
 | 6 | DevOps & Platform Engineering | | 20 | ✅ deployed |
 | 3 | Non-Functional Requirements | | 23 | ✅ deployed |
-| 8 | Data Engineering & ML | | 0 | ⬜ |
+| 8 | Data Engineering & ML | | 24 | ✅ deployed |
 | 9 | AI & GenAI Architecture | | 0 | ⬜ |
 | 10 | Governance & Eng Leadership | | 0 | ⬜ |
 
-**Total so far: 238 / 362 questions**
+**Total so far: 262 / 362 questions**
 
 ### Section detail — subsections & question targets
 
@@ -208,9 +209,12 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 7.6 Network Security (4q) IDs: 7.6.01-7.6.04
 7.7 Threat Modeling (4q) IDs: 7.7.01-7.7.04
 
-**Section 8 — Data Engineering & ML (~24q)**
-8.1 Data Pipeline Design | 8.2 Stream Processing | 8.3 Data Lake & Warehouse
-8.4 ML Platform Design | 8.5 Data Quality & Observability
+**Section 8 — Data Engineering & ML (24q) ✅ DEPLOYED**
+8.1 Data Pipeline Design (5q) IDs: 8.1.01-8.1.05
+8.2 Stream Processing (5q) IDs: 8.2.01-8.2.05
+8.3 Data Lake & Warehouse (5q) IDs: 8.3.01-8.3.05
+8.4 ML Platform Design (5q) IDs: 8.4.01-8.4.05
+8.5 Data Quality & Observability (4q) IDs: 8.5.01-8.5.04
 
 **Section 9 — AI & GenAI Architecture (~26q)**
 9.0 LLM Foundations | 9.1 LLM Integration Patterns | 9.2 RAG Architecture

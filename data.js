@@ -221,6 +221,10 @@ const KEYSTONE_DATA = {
     ...(typeof SECTION_8_QUESTIONS !== 'undefined'
         ? SECTION_8_QUESTIONS : []),
 
+    // Section 9: AI & GenAI Architecture
+    ...(typeof SECTION_9_QUESTIONS !== 'undefined'
+        ? SECTION_9_QUESTIONS : []),
+
     // ── ADD NEW SECTIONS BELOW ──────────────
     // Copy the pattern above for each new section
     // section_1.js  → SECTION_1_QUESTIONS  ✅
