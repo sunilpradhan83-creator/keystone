@@ -136,7 +136,7 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 | 1 | System Design & Architecture | | 42 | ✅ deployed |
 | 2 | Data & Storage | | 36 | ✅ deployed |
 | 11 | Real-World Scenarios | | 31 | ✅ deployed |
-| 12 | Behavioural & Soft Skills | | 1 stub | ⬜ |
+| 12 | Behavioural & Soft Skills | | 22 | ✅ deployed |
 | 5 | Cloud & Infrastructure | | 27 | ✅ deployed |
 | 6 | DevOps & Platform Engineering | | 20 | ✅ deployed |
 | 3 | Non-Functional Requirements | | 23 | ✅ deployed |
@@ -144,7 +144,7 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 | 9 | AI & GenAI Architecture | | 26 | ✅ deployed |
 | 10 | Governance & Eng Leadership | | 21 | ✅ deployed |
 
-**Total so far: 339 / 362 questions**
+**Total so far: 360 / 360 questions — COMPLETE**
 
 ### Section detail — subsections & question targets
 
@@ -245,9 +245,14 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 11.4 Diagnose Production Incidents (7q) IDs: 11.4.01-11.4.07
 Rule: each question must draw from minimum 3 sections
 
-**Section 12 — Behavioural & Soft Skills (~22q)**
-12.1 Conflict & Disagreement | 12.2 Influencing Without Authority | 12.3 Failure & Ambiguity
-12.4 Stakeholder Management | 12.5 Mentorship | 12.6 Prioritisation | 12.7 Ownership
+**Section 12 — Behavioural & Soft Skills (22q) ✅ DEPLOYED**
+12.1 Conflict & Disagreement (3q) IDs: 12.1.01-12.1.03
+12.2 Influencing Without Authority (3q) IDs: 12.2.01-12.2.03
+12.3 Handling Failure & Ambiguity (3q) IDs: 12.3.01-12.3.03
+12.4 Stakeholder Management (3q) IDs: 12.4.01-12.4.03
+12.5 Mentorship & Team Growth (3q) IDs: 12.5.01-12.5.03
+12.6 Prioritisation Under Pressure (3q) IDs: 12.6.01-12.6.03
+12.7 Ownership & Accountability (4q) IDs: 12.7.01-12.7.04
 
 ---
 
