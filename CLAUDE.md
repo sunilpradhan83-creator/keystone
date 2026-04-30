@@ -135,7 +135,7 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 | 7 | Security Architecture | | 36 | ✅ deployed |
 | 1 | System Design & Architecture | | 42 | ✅ deployed |
 | 2 | Data & Storage | | 36 | ✅ deployed |
-| 11 | Real-World Scenarios | | 1 stub | ⬜ |
+| 11 | Real-World Scenarios | | 31 | ✅ deployed |
 | 12 | Behavioural & Soft Skills | | 1 stub | ⬜ |
 | 5 | Cloud & Infrastructure | | 27 | ✅ deployed |
 | 6 | DevOps & Platform Engineering | | 20 | ✅ deployed |
@@ -144,7 +144,7 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 | 9 | AI & GenAI Architecture | | 26 | ✅ deployed |
 | 10 | Governance & Eng Leadership | | 21 | ✅ deployed |
 
-**Total so far: 309 / 362 questions**
+**Total so far: 339 / 362 questions**
 
 ### Section detail — subsections & question targets
 
@@ -238,8 +238,11 @@ Default mode: always QUICK on reveal. Toggle is session-only.
 10.6 Architecture Review (3q) IDs: 10.6.01-10.6.03
 10.7 Engineering Principles (3q) IDs: 10.7.01-10.7.03
 
-**Section 11 — Real-World Scenarios (~31q)**
-11.1 Design from Scratch | 11.2 Scale Existing System | 11.3 Migrate Legacy | 11.4 Diagnose Incidents
+**Section 11 — Real-World Scenarios (31q) ✅ DEPLOYED**
+11.1 Design from Scratch (8q) IDs: 11.1.01-11.1.08
+11.2 Scale an Existing System (8q) IDs: 11.2.01-11.2.08
+11.3 Migrate Legacy Systems (8q) IDs: 11.3.01-11.3.08
+11.4 Diagnose Production Incidents (7q) IDs: 11.4.01-11.4.07
 Rule: each question must draw from minimum 3 sections
 
 **Section 12 — Behavioural & Soft Skills (~22q)**
