@@ -225,6 +225,10 @@ const KEYSTONE_DATA = {
     ...(typeof SECTION_9_QUESTIONS !== 'undefined'
         ? SECTION_9_QUESTIONS : []),
 
+    // Section 10: Governance & Engineering Leadership
+    ...(typeof SECTION_10_QUESTIONS !== 'undefined'
+        ? SECTION_10_QUESTIONS : []),
+
     // ── ADD NEW SECTIONS BELOW ──────────────
     // Copy the pattern above for each new section
     // section_1.js  → SECTION_1_QUESTIONS  ✅
