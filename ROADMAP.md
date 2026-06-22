@@ -3,18 +3,22 @@
 Single source of truth for what's planned, in priority order. Final decisions only.
 Shipped items move to **Done** with their version.
 
-## Next (prioritized)
+## Next — v1.1.0
 
-1. Search — find questions by text, tag, id
-2. PWA / offline — installable, works without network
-3. Export / share — export progress, share a single question
-4. Spaced-repetition tuning — make the 1/3/7-day intervals configurable
-5. Accessibility + tablet/mobile polish
-6. More tests
-7. Deepen existing 360 answers
-8. New sections / questions
+1. UI structure change
+2. New sections / questions
+3. Deepen existing 360 answers
 
-_(Order is a draft — reprioritise freely.)_
+## Later (Backlog)
+
+_Versions assigned when each ships. Reserve 2.0.0 for a true redesign/breaking change._
+
+- Search — find questions by text, tag, id
+- PWA / offline — installable, works without network
+- Export / share — export progress, share a single question
+- Spaced-repetition tuning — make the 1/3/7-day intervals configurable
+- Accessibility + tablet/mobile polish
+- More tests
 
 ## Done
 
