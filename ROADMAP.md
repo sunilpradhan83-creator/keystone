@@ -9,8 +9,8 @@ Shipped items move to **Done** with their version.
 ## v1.1.0 — Progress
 
 - [x] 1. Menu + Settings + themes + liquid-glass nav   — live on dev
-- [ ] 2. Folder reorg (architect/ + tech/)             ← NEXT
-- [ ] 3. Settings Data selector + Home swap
+- [x] 2. Folder reorg (architect/ + tech/)             — on release/v2
+- [ ] 3. Settings Data selector + Home swap            ← NEXT
 - [ ] 4. Tech-card render + Java taxonomy + 1st Java section
 - [ ] 5. Remaining Java sections
 - [ ] 6. Deepen 360 answers
