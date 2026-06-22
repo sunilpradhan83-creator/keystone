@@ -673,6 +673,13 @@
     const content = DOM.question.content;
     content.innerHTML = '';
 
+    // Render-what-exists: slim tech cards may omit detailed_answer / key_points /
+    // common_trap. A card with no detailed answer reveals flat (no ⚡/📖 toggle);
+    // architect cards always have these fields, so their behaviour is unchanged.
+    const hasDetailed   = !!(q.detailed_answer && String(q.detailed_answer).trim());
+    const hasKeyPoints  = !!(q.key_points && q.key_points.length);
+    const hasTrap       = !!(q.common_trap && String(q.common_trap).trim());
+
     // Study mode indicator
     if (state.studyMode && state.studyQueue.length > 0) {
       const indicator = document.createElement('div');
@@ -709,14 +716,16 @@
     answerBlock.id = 'answer-block';
     answerBlock.className = 'answer-block';
 
-    // Mode toggle
-    const modeToggle = document.createElement('div');
-    modeToggle.id = 'answer-mode-toggle';
-    modeToggle.className = 'answer-mode-toggle q-section';
-    modeToggle.innerHTML = `
-      <button class="mode-toggle-btn active" data-mode="quick" aria-label="Quick answer mode">⚡ Quick</button>
-      <button class="mode-toggle-btn" data-mode="detailed" aria-label="Detailed answer mode">📖 Detailed</button>`;
-    answerBlock.appendChild(modeToggle);
+    // Mode toggle — only when there's a detailed view to switch to
+    if (hasDetailed) {
+      const modeToggle = document.createElement('div');
+      modeToggle.id = 'answer-mode-toggle';
+      modeToggle.className = 'answer-mode-toggle q-section';
+      modeToggle.innerHTML = `
+        <button class="mode-toggle-btn active" data-mode="quick" aria-label="Quick answer mode">⚡ Quick</button>
+        <button class="mode-toggle-btn" data-mode="detailed" aria-label="Detailed answer mode">📖 Detailed</button>`;
+      answerBlock.appendChild(modeToggle);
+    }
 
     // Quick Answer
     const quickSection = buildCardSection('quick-answer-section q-section', `
@@ -725,23 +734,27 @@
     quickSection.id = 'quick-answer-section';
     answerBlock.appendChild(quickSection);
 
-    // Detailed Answer
-    const detailedSection = buildCardSection('detailed-answer-section q-section collapsible-section collapsed', `
-      <div class="card-label accent-label">📖 Detailed Answer</div>
-      <div class="detailed-answer-text">${renderDetailedText(q.detailed_answer)}</div>`);
-    detailedSection.id = 'detailed-answer-section';
-    answerBlock.appendChild(detailedSection);
+    // Detailed Answer — only when present
+    if (hasDetailed) {
+      const detailedSection = buildCardSection('detailed-answer-section q-section collapsible-section collapsed', `
+        <div class="card-label accent-label">📖 Detailed Answer</div>
+        <div class="detailed-answer-text">${renderDetailedText(q.detailed_answer)}</div>`);
+      detailedSection.id = 'detailed-answer-section';
+      answerBlock.appendChild(detailedSection);
+    }
 
-    // Key Points
-    const kpSection = buildCardSection('key-points-section q-section collapsible-section collapsed', `
-      <div class="card-label key-points-label">✅ Key Points</div>
-      <ul class="key-points-list">${
-        (q.key_points || []).map(kp =>
-          `<li class="key-point-item"><span class="kp-check">✓</span><span>${escHtml(kp)}</span></li>`
-        ).join('')
-      }</ul>`);
-    kpSection.id = 'key-points-section';
-    answerBlock.appendChild(kpSection);
+    // Key Points — only when present
+    if (hasKeyPoints) {
+      const kpSection = buildCardSection('key-points-section q-section collapsible-section collapsed', `
+        <div class="card-label key-points-label">✅ Key Points</div>
+        <ul class="key-points-list">${
+          q.key_points.map(kp =>
+            `<li class="key-point-item"><span class="kp-check">✓</span><span>${escHtml(kp)}</span></li>`
+          ).join('')
+        }</ul>`);
+      kpSection.id = 'key-points-section';
+      answerBlock.appendChild(kpSection);
+    }
 
     // Diagram
     if (q.has_diagram && q.diagram) {
@@ -767,13 +780,15 @@
       answerBlock.appendChild(codeSection);
     }
 
-    // Common Trap
-    const trapSection = buildCardSection('trap-section q-section card-section trap-card', `
-      <div class="card-label warn-label">⚠️ Common Trap</div>
-      <p class="trap-text">${escHtml(q.common_trap)}</p>`);
-    trapSection.id = 'trap-section';
-    trapSection.className = 'trap-section q-section card-section trap-card';
-    answerBlock.appendChild(trapSection);
+    // Common Trap — only when present
+    if (hasTrap) {
+      const trapSection = buildCardSection('trap-section q-section card-section trap-card', `
+        <div class="card-label warn-label">⚠️ Common Trap</div>
+        <p class="trap-text">${escHtml(q.common_trap)}</p>`);
+      trapSection.id = 'trap-section';
+      trapSection.className = 'trap-section q-section card-section trap-card';
+      answerBlock.appendChild(trapSection);
+    }
 
     // Follow-up Questions
     if (q.follow_up_questions && q.follow_up_questions.length) {
@@ -1069,27 +1084,28 @@
     const tagsRow         = content.querySelector('#tags-row');
     const thinkSection    = content.querySelector('.think-section');
 
-    if (mode === 'quick') {
-      if (quickSection)    quickSection.classList.remove('hidden');
-      if (detailedSection) detailedSection.classList.add('hidden');
-      if (kpSection)       kpSection.classList.add('hidden');
-      if (diagramSection)  diagramSection.classList.add('hidden');
-      if (codeSection)     codeSection.classList.add('hidden');
-      if (fuSection)       fuSection.classList.add('hidden');
-      if (relSection)      relSection.classList.add('hidden');
-      if (tagsRow)         tagsRow.classList.add('hidden');
-      if (thinkSection && state.answerRevealed) thinkSection.classList.add('hidden');
-    } else {
-      if (quickSection)    quickSection.classList.add('hidden');
-      show(detailedSection);
-      show(kpSection);
-      if (diagramSection && q.has_diagram && q.diagram)               show(diagramSection);
-      if (codeSection    && q.has_code    && q.code_snippet)          show(codeSection);
-      if (fuSection      && q.follow_up_questions?.length)            show(fuSection);
-      if (relSection     && q.related?.length)                        show(relSection);
-      if (tagsRow)         tagsRow.classList.remove('hidden');
-      if (thinkSection && state.answerRevealed) thinkSection.classList.add('hidden');
+    // Flat card (slim tech, no detailed answer): no toggle — reveal everything
+    // present at once. Otherwise honour the quick/detailed split (architect).
+    const flat  = !detailedSection;
+    const depth = flat || mode === 'detailed';
+
+    // Quick answer shows in flat mode and in quick mode; hidden only when
+    // a has-detailed card is switched to detailed.
+    if (quickSection) quickSection.classList.toggle('hidden', !flat && mode !== 'quick');
+    if (detailedSection) {
+      if (mode === 'detailed') show(detailedSection);
+      else detailedSection.classList.add('hidden');
     }
+
+    const setDepth = (el, present) => { if (el) (depth && present) ? show(el) : el.classList.add('hidden'); };
+    setDepth(kpSection,      true);
+    setDepth(diagramSection, q.has_diagram && q.diagram);
+    setDepth(codeSection,    q.has_code && q.code_snippet);
+    setDepth(fuSection,      q.follow_up_questions?.length);
+    setDepth(relSection,     q.related?.length);
+
+    if (tagsRow) tagsRow.classList.toggle('hidden', !depth);
+    if (thinkSection && state.answerRevealed) thinkSection.classList.add('hidden');
   }
 
   function show(el) {
