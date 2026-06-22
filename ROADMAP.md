@@ -3,6 +3,23 @@
 Single source of truth for what's planned, in priority order. Final decisions only.
 Shipped items move to **Done** with their version.
 
+> **Live progress lives in this file.** Finishing a chunk = tick its box below + commit.
+> New session? Read only this file for full context — no repo scan needed.
+
+## v1.1.0 — Progress
+
+- [x] 1. Menu + Settings + themes + liquid-glass nav   — live on dev
+- [ ] 2. Folder reorg (architect/ + tech/)             ← NEXT
+- [ ] 3. Settings Data selector + Home swap
+- [ ] 4. Tech-card render + Java taxonomy + 1st Java section
+- [ ] 5. Remaining Java sections
+- [ ] 6. Deepen 360 answers
+
+Dev:  keystone-dev.vercel.app  (release/v2, integration)
+Prod: keystone-lake.vercel.app (main, frozen)
+
+Deferred (not blocking v1.1.0): detailed-section reading-UI design · Python/React (post-Java-pilot).
+
 ## Branching & deploys
 
 - **`main`** — production (v1.x). Frozen except hotfixes + release merges. Live at
