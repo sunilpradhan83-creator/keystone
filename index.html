@@ -402,16 +402,25 @@
         </div>
       </section>
 
-      <!-- Data (placeholder — wired in a later chunk) -->
+      <!-- Data -->
       <section class="settings-group">
         <div class="settings-group-label">Data</div>
-        <div class="settings-placeholder">
-          <span class="settings-placeholder-icon">🧱</span>
-          <div>
-            <div class="settings-placeholder-title">Architect</div>
-            <div class="settings-placeholder-sub">Tech reference (Java, Python…) — coming soon</div>
-          </div>
-          <span class="settings-badge">Soon</span>
+        <div class="data-options" id="data-options" role="radiogroup" aria-label="Question bank">
+          <button class="data-opt" data-bank-value="architect" role="radio" aria-checked="true">
+            <span class="data-opt-icon">🧱</span>
+            <div class="data-opt-text">
+              <span class="data-opt-name">Architect</span>
+              <span class="data-opt-sub">360 questions · 12 sections</span>
+            </div>
+          </button>
+          <button class="data-opt" data-bank-value="java" role="radio" aria-checked="false" aria-disabled="true" disabled>
+            <span class="data-opt-icon">☕</span>
+            <div class="data-opt-text">
+              <span class="data-opt-name">Tech ▸ Java</span>
+              <span class="data-opt-sub">Tech reference — coming soon</span>
+            </div>
+            <span class="settings-badge">Soon</span>
+          </button>
         </div>
       </section>
 
