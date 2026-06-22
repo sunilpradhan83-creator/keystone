@@ -3,11 +3,48 @@
 Single source of truth for what's planned, in priority order. Final decisions only.
 Shipped items move to **Done** with their version.
 
+## Branching & deploys
+
+- **`main`** — production (v1.x). Frozen except hotfixes + release merges. Live at
+  `keystone-lake.vercel.app`. Real users depend on it — keep it error-free.
+- **`release/v2`** — long-lived integration branch for the v2 initiative. All feature
+  branches merge here. v1.1.0 is the first release shipped from this line; many more to come.
+- **Feature branches** (`feat/*`) → merge into `release/v2`, never into `main`.
+- **Dev preview** — Vercel project `keystone-dev` tracks `release/v2` → `keystone-dev.vercel.app`.
+  One persistent dev URL across all releases (not per-release).
+- **Release** — when a version is ready, merge `release/v2` → `main`, tag, deploy production.
+
 ## Next — v1.1.0
 
-1. UI structure change
-2. New sections / questions
-3. Deepen existing 360 answers
+Two banks in one app — keep the architect bank pure, add a tech-reference bank for
+early-round (tech-lead / mid-level) screening. Pilot with Java.
+
+**1. Structure — two banks**
+- `questions/architect/` (today's 360, moved as-is) + `questions/tech/<stack>/` (java, python, …)
+- Tech mirrors the architect *shape*: technology = section, topic = subsection; each stack has
+  its own named sections that double as UI labels
+- Slug ids for tech (`java.concurrency.01`) vs architect's numeric ids (`4.1.01`) — clean split,
+  enforces separation, simplifies the validator
+- Banks never interleave: no cross-links between architect and tech graphs
+
+**2. Tech schema — slimmer, render-what-exists**
+- Default card: question, quick_answer, key_points, common_trap, tags
+- Optional on depth: detailed_answer, code, diagram, follow-up *questions only* (no mini-answers/links)
+- Elastic disclosure: list → short answer → (relations if any) → (detail if earned);
+  one-line questions stop at the short answer (no empty expand)
+
+**3. Navigation**
+- Menu: `Home · Settings`
+- Settings: **Data** (Architect / Tech▸Java/Python…) + **Theme** (Dark / Light / Read) — both persisted locally
+- Home: existing layout; content swaps to match the selected data
+
+**4. Deepen existing 360 answers** (carried from original v1.1.0 scope)
+
+**Open decisions (resolve before/at start):**
+- Java's section taxonomy (the actual section list)
+- Sequencing: folder reorg (its own branch) vs starting Java content first
+- Detailed-section UI design — deferred as later design work
+- Do Mock / spaced-repetition apply to the tech bank? (lean: Study/browse yes, SRS later)
 
 ## Later (Backlog)
 
