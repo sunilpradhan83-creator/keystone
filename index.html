@@ -6,6 +6,16 @@
   <title>KEYSTONE — Architect Interview Question Bank</title>
   <meta name="description" content="Architect-level interview question bank with spaced repetition and mock interviews." />
 
+  <!-- Apply saved theme before paint (no flash) -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('keystone_theme');
+        if (t === 'light' || t === 'read') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,6 +27,27 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- APP NAV (top bar desktop / bottom tabs mobile) -->
+  <!-- ═══════════════════════════════════════════ -->
+  <nav class="app-nav" id="app-nav" aria-label="Primary">
+    <div class="app-nav-brand">
+      <span class="app-nav-logo">🏛️</span>
+      <span class="app-nav-word">KEYSTONE</span>
+    </div>
+    <div class="app-nav-tabs">
+      <span class="nav-indicator" aria-hidden="true"></span>
+      <button class="nav-tab active" id="nav-home" data-screen="home" aria-label="Home">
+        <span class="nav-tab-icon">🏠</span>
+        <span class="nav-tab-label">Home</span>
+      </button>
+      <button class="nav-tab" id="nav-settings" data-screen="settings" aria-label="Settings">
+        <span class="nav-tab-icon">⚙️</span>
+        <span class="nav-tab-label">Settings</span>
+      </button>
+    </div>
+  </nav>
 
   <!-- ═══════════════════════════════════════════ -->
   <!-- SCREEN 1: HOME                              -->
@@ -337,6 +368,52 @@
           <!-- Rendered by JS -->
         </div>
       </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SCREEN: SETTINGS                            -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="screen-settings" class="screen">
+    <div class="screen-inner">
+
+      <header class="settings-header">
+        <h1 class="settings-title">Settings</h1>
+        <p class="settings-subtitle">Personalise your Keystone</p>
+      </header>
+
+      <!-- Theme -->
+      <section class="settings-group">
+        <div class="settings-group-label">Theme</div>
+        <div class="theme-options" id="theme-options" role="radiogroup" aria-label="Theme">
+          <button class="theme-opt" data-theme-value="dark" role="radio" aria-checked="true">
+            <span class="theme-swatch theme-swatch-dark"></span>
+            <span class="theme-opt-name">Dark</span>
+          </button>
+          <button class="theme-opt" data-theme-value="light" role="radio" aria-checked="false">
+            <span class="theme-swatch theme-swatch-light"></span>
+            <span class="theme-opt-name">Light</span>
+          </button>
+          <button class="theme-opt" data-theme-value="read" role="radio" aria-checked="false">
+            <span class="theme-swatch theme-swatch-read"></span>
+            <span class="theme-opt-name">Read</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Data (placeholder — wired in a later chunk) -->
+      <section class="settings-group">
+        <div class="settings-group-label">Data</div>
+        <div class="settings-placeholder">
+          <span class="settings-placeholder-icon">🧱</span>
+          <div>
+            <div class="settings-placeholder-title">Architect</div>
+            <div class="settings-placeholder-sub">Tech reference (Java, Python…) — coming soon</div>
+          </div>
+          <span class="settings-badge">Soon</span>
+        </div>
+      </section>
 
     </div>
   </div>

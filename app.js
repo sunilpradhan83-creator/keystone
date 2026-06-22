@@ -7,6 +7,8 @@
 
   /* ── Constants ───────────────────────────────────── */
   const LS_KEY = 'keystone_progress';
+  const THEME_KEY = 'keystone_theme';
+  const THEMES = ['dark', 'light', 'read'];
   const REVIEW_DAYS = { weak: 1, ok: 3, strong: 7 };
   const RATING_EMOJI = { weak: '😟', ok: '🙂', strong: '💪' };
 
@@ -47,6 +49,15 @@
       question: $('screen-question'),
       mock:     $('screen-mock'),
       progress: $('screen-progress'),
+      settings: $('screen-settings'),
+    };
+    DOM.nav = {
+      el:        $('app-nav'),
+      tabs:      document.querySelectorAll('.nav-tab'),
+      indicator: document.querySelector('.nav-indicator'),
+    };
+    DOM.settings = {
+      themeOpts: document.querySelectorAll('.theme-opt'),
     };
     DOM.home = {
       statMastered:  $('stat-mastered'),
@@ -247,10 +258,44 @@
     saveProgress(p);
   }
 
+  /* ── Theme ───────────────────────────────────────── */
+  function loadTheme() {
+    try {
+      const t = localStorage.getItem(THEME_KEY);
+      return THEMES.includes(t) ? t : 'dark';
+    } catch {
+      return 'dark';
+    }
+  }
+
+  function applyTheme(name) {
+    if (!THEMES.includes(name)) name = 'dark';
+    document.documentElement.setAttribute('data-theme', name);
+    try { localStorage.setItem(THEME_KEY, name); } catch {}
+    DOM.settings.themeOpts.forEach(opt => {
+      opt.setAttribute('aria-checked', opt.dataset.themeValue === name ? 'true' : 'false');
+    });
+  }
+
+  /* ── Liquid-glass nav indicator ──────────────────── */
+  function positionNavIndicator() {
+    const ind = DOM.nav.indicator;
+    if (!ind) return;
+    const active = Array.from(DOM.nav.tabs).find(t => t.classList.contains('active'));
+    if (!active) return;
+    ind.style.width = active.offsetWidth + 'px';
+    ind.style.transform = `translate(${active.offsetLeft}px, -50%)`;
+  }
+
   /* ── Screen Navigation ───────────────────────────── */
   function showScreen(name) {
     Object.values(DOM.screens).forEach(s => s.classList.remove('active'));
     DOM.screens[name].classList.add('active');
+    const navName = name === 'settings' ? 'settings' : 'home';
+    DOM.nav.tabs.forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.screen === navName);
+    });
+    positionNavIndicator();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -1655,6 +1700,22 @@
 
     // Progress reset
     DOM.progress.resetBtn.addEventListener('click', resetAllProgress);
+
+    // Nav tabs
+    DOM.nav.tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        if (tab.dataset.screen === 'settings') showScreen('settings');
+        else navigateTo('home', renderHome);
+      });
+    });
+
+    // Theme options
+    DOM.settings.themeOpts.forEach(opt => {
+      opt.addEventListener('click', () => applyTheme(opt.dataset.themeValue));
+    });
+
+    // Keep the glass indicator aligned when layout reflows (desktop ↔ mobile)
+    window.addEventListener('resize', positionNavIndicator);
   }
 
   /* ═══════════════════════════════════════════════════
@@ -1663,10 +1724,14 @@
 
   function init() {
     cacheDOM();
+    applyTheme(loadTheme());
     wireEvents();
     initKeyboard();
     validateData();
     renderHome();
+    // Snap the indicator into place, then enable the spring for subsequent taps
+    positionNavIndicator();
+    if (DOM.nav.el) requestAnimationFrame(() => DOM.nav.el.classList.add('nav-ready'));
   }
 
   document.addEventListener('DOMContentLoaded', init);
