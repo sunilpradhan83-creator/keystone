@@ -78,9 +78,6 @@
       overallPct:    $('overall-pct'),
       overallBar:    $('overall-bar'),
       sectionsGrid:  $('sections-grid'),
-      btnStudy:      $('btn-study'),
-      btnMock:       $('btn-mock'),
-      btnProgress:   $('btn-progress'),
     };
     DOM.section = {
       backBtn:       $('section-back-btn'),
@@ -333,7 +330,12 @@
   function showScreen(name) {
     Object.values(DOM.screens).forEach(s => s.classList.remove('active'));
     DOM.screens[name].classList.add('active');
-    const navName = name === 'settings' ? 'settings' : 'home';
+    // Study has no screen of its own — while a study session is running, keep
+    // its tab lit (the session lands on the question screen).
+    let navName;
+    if (['settings', 'mock', 'progress'].includes(name)) navName = name;
+    else if (state.studyMode && (name === 'question' || name === 'section')) navName = 'study';
+    else navName = 'home';
     DOM.nav.tabs.forEach(tab => {
       tab.classList.toggle('active', tab.dataset.screen === navName);
     });
@@ -1671,18 +1673,6 @@
      ═══════════════════════════════════════════════════ */
 
   function wireEvents() {
-    // Home
-    DOM.home.btnStudy.addEventListener('click', startStudyMode);
-    DOM.home.btnMock.addEventListener('click', () => {
-      renderMockSetup();
-      resetMockUI();
-      navigateTo('mock');
-    });
-    DOM.home.btnProgress.addEventListener('click', () => {
-      renderProgress();
-      navigateTo('progress');
-    });
-
     // Section back
     DOM.section.backBtn.addEventListener('click', () => {
       state.studyMode = false;
@@ -1759,11 +1749,16 @@
     // Progress reset
     DOM.progress.resetBtn.addEventListener('click', resetAllProgress);
 
-    // Nav tabs
+    // Nav tabs — Study is an action (starts a queue); the rest are screens
     DOM.nav.tabs.forEach(tab => {
       tab.addEventListener('click', () => {
-        if (tab.dataset.screen === 'settings') showScreen('settings');
-        else navigateTo('home', renderHome);
+        switch (tab.dataset.screen) {
+          case 'study':    startStudyMode(); break;
+          case 'mock':     renderMockSetup(); resetMockUI(); navigateTo('mock'); break;
+          case 'progress': renderProgress(); navigateTo('progress'); break;
+          case 'settings': showScreen('settings'); break;
+          default:         navigateTo('home', renderHome);
+        }
       });
     });
 
