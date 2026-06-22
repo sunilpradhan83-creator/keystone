@@ -9,6 +9,15 @@
   const LS_KEY = 'keystone_progress';
   const THEME_KEY = 'keystone_theme';
   const THEMES = ['dark', 'light', 'read'];
+
+  // Question banks. Architect is the only live bank today; tech banks
+  // (java, python…) register here in a later chunk. The whole app reads
+  // through the active bank (DB) so switching is atomic — no half-states.
+  const DATA_KEY = 'keystone_bank';
+  const BANKS = { architect: KEYSTONE_DATA };
+  const DEFAULT_BANK = 'architect';
+  let DB = KEYSTONE_DATA;   // active bank — reassigned by applyBank()
+
   const REVIEW_DAYS = { weak: 1, ok: 3, strong: 7 };
   const RATING_EMOJI = { weak: '😟', ok: '🙂', strong: '💪' };
 
@@ -58,6 +67,7 @@
     };
     DOM.settings = {
       themeOpts: document.querySelectorAll('.theme-opt'),
+      dataOpts:  document.querySelectorAll('.data-opt'),
     };
     DOM.home = {
       statMastered:  $('stat-mastered'),
@@ -173,23 +183,23 @@
 
   /* ── Data Helpers ────────────────────────────────── */
   function getSection(id) {
-    return KEYSTONE_DATA.sections.find(s => s.id === id);
+    return DB.sections.find(s => s.id === id);
   }
 
   function getSubsection(id) {
-    return KEYSTONE_DATA.subsections.find(s => s.id === id);
+    return DB.subsections.find(s => s.id === id);
   }
 
   function getQuestion(id) {
-    return KEYSTONE_DATA.questions.find(q => q.id === id);
+    return DB.questions.find(q => q.id === id);
   }
 
   function getQuestionsForSection(sectionId) {
-    return KEYSTONE_DATA.questions.filter(q => q.section === sectionId);
+    return DB.questions.filter(q => q.section === sectionId);
   }
 
   function getSubsectionsForSection(sectionId) {
-    return KEYSTONE_DATA.subsections.filter(s => s.section === sectionId);
+    return DB.subsections.filter(s => s.section === sectionId);
   }
 
   function questionCount(sectionId) {
@@ -225,7 +235,7 @@
   }
 
   function getOverallPct() {
-    return getConfidencePct(KEYSTONE_DATA.questions);
+    return getConfidencePct(DB.questions);
   }
 
   function saveRating(qId, rating) {
@@ -275,6 +285,33 @@
     DOM.settings.themeOpts.forEach(opt => {
       opt.setAttribute('aria-checked', opt.dataset.themeValue === name ? 'true' : 'false');
     });
+  }
+
+  /* ── Data bank ───────────────────────────────────── */
+  function loadBank() {
+    try {
+      const b = localStorage.getItem(DATA_KEY);
+      return BANKS[b] ? b : DEFAULT_BANK;
+    } catch {
+      return DEFAULT_BANK;
+    }
+  }
+
+  // Switch the active bank: re-point DB, persist, reset navigation to a
+  // clean Home, and re-render everything off the new dataset. Unknown or
+  // not-yet-live banks fall back to the default — no broken state.
+  function applyBank(name) {
+    if (!BANKS[name]) name = DEFAULT_BANK;
+    DB = BANKS[name];
+    try { localStorage.setItem(DATA_KEY, name); } catch {}
+    DOM.settings.dataOpts.forEach(opt => {
+      opt.setAttribute('aria-checked', opt.dataset.bankValue === name ? 'true' : 'false');
+    });
+    // Drop any in-flight navigation so counts/screens can't show a stale bank.
+    state.currentSection = null;
+    state.currentQuestion = null;
+    state.navStack = [];
+    navigateTo('home', renderHome);
   }
 
   /* ── Liquid-glass nav indicator ──────────────────── */
@@ -369,7 +406,7 @@
 
   function renderHome() {
     const p = loadProgress();
-    const total = KEYSTONE_DATA.questions.length;
+    const total = DB.questions.length;
     const mastered = getMasteredCount();
     const streak = p.streak.count || 0;
     const due = getDueCount();
@@ -389,7 +426,7 @@
     const grid = DOM.home.sectionsGrid;
     const frag = document.createDocumentFragment();
 
-    KEYSTONE_DATA.sections.forEach((section, idx) => {
+    DB.sections.forEach((section, idx) => {
       const qs = getQuestionsForSection(section.id);
       const pct = getSectionConfidence(section.id);
       const card = document.createElement('div');
@@ -461,7 +498,7 @@
     let totalVisible = 0;
 
     subsections.forEach(sub => {
-      let qs = KEYSTONE_DATA.questions.filter(q => q.subsection === sub.id);
+      let qs = DB.questions.filter(q => q.subsection === sub.id);
       if (filter !== 'all') qs = qs.filter(q => q.level === filter);
       if (!qs.length) return;
 
@@ -751,7 +788,7 @@
         <div class="card-label">🔗 Related</div>
         <div class="related-pills">${
           (() => {
-            const allIds = new Set(KEYSTONE_DATA.questions.map(q => q.id));
+            const allIds = new Set(DB.questions.map(q => q.id));
             return q.related.map(id =>
               allIds.has(id)
                 ? `<button class="related-pill" data-qid="${escHtml(id)}" aria-label="Go to question ${escHtml(id)}">${escHtml(id)}</button>`
@@ -810,14 +847,14 @@
   }
 
   function buildFollowUpHTML(followUps) {
-    const allIds = new Set(KEYSTONE_DATA.questions.map(q => q.id));
+    const allIds = new Set(DB.questions.map(q => q.id));
 
     function comingSoonLabel(linksTo) {
       if (!linksTo) return 'Card coming soon';
       const secId  = parseInt(linksTo.split('.')[0]);
       const subId  = linksTo.split('.').slice(0, 2).join('.');
-      const sec    = KEYSTONE_DATA.sections.find(s => s.id === secId);
-      const sub    = KEYSTONE_DATA.subsections.find(s => s.id === subId);
+      const sec    = DB.sections.find(s => s.id === secId);
+      const sub    = DB.subsections.find(s => s.id === subId);
       const secName = sec  ? sec.title  : `Section ${secId}`;
       const subName = sub  ? sub.title  : `${subId}`;
       return `Card coming soon in ${escHtml(secName)} — ${escHtml(subName)}`;
@@ -1123,7 +1160,7 @@
   }
 
   function buildSectionQueue() {
-    if (!state.currentSection) return KEYSTONE_DATA.questions.map(q => q.id);
+    if (!state.currentSection) return DB.questions.map(q => q.id);
     return getQuestionsForSection(state.currentSection).map(q => q.id);
   }
 
@@ -1239,13 +1276,13 @@
     const p = loadProgress();
     const t = today();
 
-    const due     = KEYSTONE_DATA.questions.filter(q => {
+    const due     = DB.questions.filter(q => {
       const r = p.ratings[q.id];
       return r && r.reviewDate && r.reviewDate <= t;
     });
-    const unrated = KEYSTONE_DATA.questions.filter(q => !p.ratings[q.id]);
-    const weak    = KEYSTONE_DATA.questions.filter(q => p.ratings[q.id]?.rating === 'weak' && !(p.ratings[q.id]?.reviewDate <= t));
-    const rest    = KEYSTONE_DATA.questions.filter(q => {
+    const unrated = DB.questions.filter(q => !p.ratings[q.id]);
+    const weak    = DB.questions.filter(q => p.ratings[q.id]?.rating === 'weak' && !(p.ratings[q.id]?.reviewDate <= t));
+    const rest    = DB.questions.filter(q => {
       const r = p.ratings[q.id];
       return r && r.rating !== 'weak' && !(r.reviewDate <= t);
     });
@@ -1273,7 +1310,7 @@
     const grid = DOM.mock.sectionGrid;
     const frag = document.createDocumentFragment();
 
-    KEYSTONE_DATA.sections.forEach(section => {
+    DB.sections.forEach(section => {
       const btn = document.createElement('button');
       btn.className = 'mock-section-btn selected';
       btn.dataset.sectionId = section.id;
@@ -1302,7 +1339,7 @@
     const difficulty = DOM.mock.difficulty.value;
     const count = parseInt(DOM.mock.count.value, 10);
 
-    let pool = KEYSTONE_DATA.questions.filter(q => selectedSectionIds.includes(q.section));
+    let pool = DB.questions.filter(q => selectedSectionIds.includes(q.section));
     if (difficulty !== 'all') pool = pool.filter(q => q.level === difficulty);
 
     if (!pool.length) {
@@ -1470,7 +1507,7 @@
 
   function renderProgress() {
     const p = loadProgress();
-    const total = KEYSTONE_DATA.questions.length;
+    const total = DB.questions.length;
     const ratings = Object.values(p.ratings);
     const mastered = ratings.filter(r => r.rating === 'strong').length;
     const rated = ratings.filter(r => r.rating).length;
@@ -1485,7 +1522,7 @@
 
     // Section breakdown
     const frag = document.createDocumentFragment();
-    KEYSTONE_DATA.sections.forEach(section => {
+    DB.sections.forEach(section => {
       const qs = getQuestionsForSection(section.id);
       if (!qs.length) return;
 
@@ -1593,8 +1630,8 @@
      ═══════════════════════════════════════════════════ */
 
   function validateData() {
-    const allIds = new Set(KEYSTONE_DATA.questions.map(q => q.id));
-    KEYSTONE_DATA.questions.forEach(q => {
+    const allIds = new Set(DB.questions.map(q => q.id));
+    DB.questions.forEach(q => {
       (q.follow_up_questions || []).forEach(fu => {
         if (fu.type === 'linked' && fu.links_to && !allIds.has(fu.links_to)) {
           console.warn(`[KEYSTONE] Broken follow-up link in question ${q.id}: links_to "${fu.links_to}" not found.`);
@@ -1714,6 +1751,14 @@
       opt.addEventListener('click', () => applyTheme(opt.dataset.themeValue));
     });
 
+    // Data bank options (disabled banks — e.g. Java until it ships — no-op)
+    DOM.settings.dataOpts.forEach(opt => {
+      opt.addEventListener('click', () => {
+        if (opt.disabled || opt.getAttribute('aria-disabled') === 'true') return;
+        applyBank(opt.dataset.bankValue);
+      });
+    });
+
     // Keep the glass indicator aligned when layout reflows (desktop ↔ mobile)
     window.addEventListener('resize', positionNavIndicator);
   }
@@ -1725,6 +1770,12 @@
   function init() {
     cacheDOM();
     applyTheme(loadTheme());
+    // Restore the active bank before first render (no navigation during init).
+    const startBank = loadBank();
+    DB = BANKS[startBank];
+    DOM.settings.dataOpts.forEach(opt => {
+      opt.setAttribute('aria-checked', opt.dataset.bankValue === startBank ? 'true' : 'false');
+    });
     wireEvents();
     initKeyboard();
     validateData();
