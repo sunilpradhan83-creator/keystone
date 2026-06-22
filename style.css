@@ -418,54 +418,6 @@ code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
   color: var(--primary);
 }
 
-/* Mode Buttons */
-.mode-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 24px;
-}
-
-.mode-btn {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 8px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  min-height: 88px;
-}
-
-.mode-btn:hover { transform: translateY(-1px); }
-.mode-btn:active { transform: scale(0.98); }
-
-.mode-mock {
-  background: linear-gradient(135deg, var(--primary), var(--accent2));
-  border-color: transparent;
-  box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 30%, transparent);
-}
-
-.mode-icon { font-size: 22px; }
-
-.mode-title {
-  font-family: 'Syne', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.mode-sub {
-  font-size: 10px;
-  color: var(--text3);
-}
-
-.mode-mock .mode-title,
-.mode-mock .mode-sub { color: rgba(255,255,255,0.9); }
-
 /* Sections Grid */
 .sections-grid {
   display: grid;
@@ -1815,7 +1767,6 @@ body.focus-mode #question-sub-header .level-badge {
    ═══════════════════════════════════════════════════ */
 @media (max-width: 480px) {
   .sections-grid { grid-template-columns: 1fr; }
-  .mode-buttons { grid-template-columns: repeat(3, 1fr); }
   .mock-section-grid { grid-template-columns: repeat(2, 1fr); }
   .results-actions { flex-direction: column; }
   .rating-buttons { grid-template-columns: 1fr; }
