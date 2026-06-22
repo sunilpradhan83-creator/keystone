@@ -11,8 +11,8 @@ Shipped items move to **Done** with their version.
 - [x] 1. Menu + Settings + themes + liquid-glass nav   — live on dev
 - [x] 2. Folder reorg (architect/ + tech/)             — on release/v2
 - [x] 3. Settings Data selector + Home swap            — on release/v2
-- [ ] 4. Tech-card render + Java taxonomy + 1st Java section  ← NEXT
-- [ ] 5. Remaining Java sections
+- [x] 4. Tech-card render + Java taxonomy + 1st Java section  — on release/v2
+- [ ] 5. Remaining Java sections                              ← NEXT
 - [ ] 6. Deepen 360 answers
 
 Dev:  keystone-dev.vercel.app  (release/v2, integration)
