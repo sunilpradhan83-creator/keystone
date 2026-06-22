@@ -10,11 +10,12 @@
   const THEME_KEY = 'keystone_theme';
   const THEMES = ['dark', 'light', 'read'];
 
-  // Question banks. Architect is the only live bank today; tech banks
-  // (java, python…) register here in a later chunk. The whole app reads
-  // through the active bank (DB) so switching is atomic — no half-states.
+  // Question banks. Architect is always present; tech banks (java, python…)
+  // register when their data file is loaded. The whole app reads through the
+  // active bank (DB) so switching is atomic — no half-states.
   const DATA_KEY = 'keystone_bank';
   const BANKS = { architect: KEYSTONE_DATA };
+  if (typeof JAVA_DATA !== 'undefined' && JAVA_DATA.questions.length) BANKS.java = JAVA_DATA;
   const DEFAULT_BANK = 'architect';
   let DB = KEYSTONE_DATA;   // active bank — reassigned by applyBank()
 
@@ -223,15 +224,19 @@
     return getConfidencePct(getQuestionsForSection(sectionId));
   }
 
+  // Stats are scoped to the active bank so counts never exceed its total
+  // (ids are unique per bank, so progress is shared without colliding).
   function getDueCount() {
     const p = loadProgress();
     const t = today();
-    return Object.values(p.ratings).filter(r => r.reviewDate && r.reviewDate <= t).length;
+    const ids = new Set(DB.questions.map(q => q.id));
+    return Object.entries(p.ratings).filter(([id, r]) => ids.has(id) && r.reviewDate && r.reviewDate <= t).length;
   }
 
   function getMasteredCount() {
     const p = loadProgress();
-    return Object.values(p.ratings).filter(r => r.rating === 'strong').length;
+    const ids = new Set(DB.questions.map(q => q.id));
+    return Object.entries(p.ratings).filter(([id, r]) => ids.has(id) && r.rating === 'strong').length;
   }
 
   function getOverallPct() {
@@ -1523,8 +1528,8 @@
 
   function renderProgress() {
     const p = loadProgress();
-    const total = DB.questions.length;
-    const ratings = Object.values(p.ratings);
+    const ids = new Set(DB.questions.map(q => q.id));
+    const ratings = Object.entries(p.ratings).filter(([id]) => ids.has(id)).map(([, r]) => r);
     const mastered = ratings.filter(r => r.rating === 'strong').length;
     const rated = ratings.filter(r => r.rating).length;
     const accuracy = rated > 0 ? Math.round((mastered / rated) * 100) : 0;
