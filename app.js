@@ -15,6 +15,7 @@
   // active bank (DB) so switching is atomic — no half-states.
   const DATA_KEY = 'keystone_bank';
   const BANKS = { architect: KEYSTONE_DATA };
+  const BANK_LABELS = { architect: 'Architect', java: 'Java' };
   if (typeof JAVA_DATA !== 'undefined' && JAVA_DATA.questions.length) BANKS.java = JAVA_DATA;
   const DEFAULT_BANK = 'architect';
   let DB = KEYSTONE_DATA;   // active bank — reassigned by applyBank()
@@ -1613,12 +1614,18 @@
     grid.appendChild(frag);
   }
 
+  // Reset is scoped to the active bank — clears only this stack's ratings and
+  // leaves the other bank's progress (and the cross-bank streak/sessions) intact.
   function resetAllProgress() {
-    if (!confirm('Reset all progress? This cannot be undone.')) return;
-    saveProgress(defaultProgress());
+    const label = BANK_LABELS[loadBank()] || 'this bank';
+    if (!confirm(`Reset all ${label} progress? This cannot be undone.`)) return;
+    const p = loadProgress();
+    const ids = new Set(DB.questions.map(q => q.id));
+    Object.keys(p.ratings).forEach(id => { if (ids.has(id)) delete p.ratings[id]; });
+    saveProgress(p);
     renderProgress();
     renderHome();
-    showToast('Progress reset', 'warn');
+    showToast(`${label} progress reset`, 'warn');
   }
 
   /* ═══════════════════════════════════════════════════
