@@ -1378,8 +1378,9 @@
   }
 
   function startMockSession() {
+    // Keep ids as strings — architect ids are numeric, tech ids are slugs.
     const selectedSectionIds = Array.from(DOM.mock.sectionGrid.querySelectorAll('.mock-section-btn.selected'))
-      .map(b => parseInt(b.dataset.sectionId, 10));
+      .map(b => b.dataset.sectionId);
 
     if (!selectedSectionIds.length) {
       DOM.mock.sectionGrid.classList.add('shake');
@@ -1390,7 +1391,7 @@
     const difficulty = DOM.mock.difficulty.value;
     const count = parseInt(DOM.mock.count.value, 10);
 
-    let pool = DB.questions.filter(q => selectedSectionIds.includes(q.section));
+    let pool = DB.questions.filter(q => selectedSectionIds.includes(String(q.section)));
     if (difficulty !== 'all') pool = pool.filter(q => q.level === difficulty);
 
     if (!pool.length) {
