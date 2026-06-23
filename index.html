@@ -416,7 +416,26 @@
         </div>
       </section>
 
+      <!-- Quick Scan -->
+      <section class="settings-group">
+        <div class="settings-group-label">Quick Scan</div>
+        <button class="scan-toggle" id="scan-toggle" role="switch" aria-checked="false">
+          <span class="scan-toggle-icon">⚡</span>
+          <div class="scan-toggle-text">
+            <span class="scan-toggle-name">Quick Scan mode</span>
+            <span class="scan-toggle-sub">Answers shown instantly · no progress tracked · resets on reload</span>
+          </div>
+          <span class="scan-switch" aria-hidden="true"><span class="scan-switch-knob"></span></span>
+        </button>
+      </section>
+
     </div>
+  </div>
+
+  <!-- Quick Scan active indicator (ambient, top-right) -->
+  <div id="scan-banner" class="scan-banner" role="status" aria-label="Quick Scan active — progress paused" hidden>
+    <span class="scan-banner-dot" aria-hidden="true"></span>
+    <span>⚡ Quick Scan</span>
   </div>
 
   <!-- ═══════════════════════════════════════════ -->

@@ -47,6 +47,7 @@
     answerRevealed: false,
     answerMode: 'quick',
     toastTimeout: null,
+    quickScan: false,   // session-only — pre-interview low-friction read mode
   };
 
   /* ── DOM Cache ───────────────────────────────────── */
@@ -68,9 +69,11 @@
       indicator: document.querySelector('.nav-indicator'),
     };
     DOM.settings = {
-      themeOpts: document.querySelectorAll('.theme-opt'),
-      dataOpts:  document.querySelectorAll('.data-opt'),
+      themeOpts:  document.querySelectorAll('.theme-opt'),
+      dataOpts:   document.querySelectorAll('.data-opt'),
+      scanToggle: $('scan-toggle'),
     };
+    DOM.scanBanner = $('scan-banner');
     DOM.home = {
       statMastered:  $('stat-mastered'),
       statTotal:     $('stat-total'),
@@ -317,6 +320,21 @@
     navigateTo('home', renderHome);
   }
 
+  /* ── Quick Scan mode ─────────────────────────────── */
+  // Session-only, low-friction read mode: answers shown instantly, ratings
+  // hidden so nothing is written to progress. Never persisted — off on reload.
+  function applyQuickScan(on) {
+    state.quickScan = !!on;
+    document.body.classList.toggle('quick-scan', state.quickScan);
+    if (DOM.settings.scanToggle) DOM.settings.scanToggle.setAttribute('aria-checked', String(state.quickScan));
+    if (DOM.scanBanner) DOM.scanBanner.hidden = !state.quickScan;
+    // Nav collapses/expands (Study/Mock/Progress hide) — realign the indicator.
+    positionNavIndicator();
+    // Re-render whatever's on screen so the new behaviour applies immediately.
+    if (state.currentSection) renderQuestionList(state.currentSection, state.currentFilter);
+    showToast(state.quickScan ? '⚡ Quick Scan on — progress paused' : 'Quick Scan off', state.quickScan ? 'default' : 'default');
+  }
+
   /* ── Liquid-glass nav indicator ──────────────────── */
   function positionNavIndicator() {
     const ind = DOM.nav.indicator;
@@ -536,7 +554,9 @@
           </div>
           <span class="question-row-arrow">›</span>`;
 
-        if (!isRated) {
+        // In Quick Scan, every row peeks inline (not just rated ones).
+        const inlineExpand = state.quickScan || isRated;
+        if (!inlineExpand) {
           row.addEventListener('click', () => openQuestion(q.id, { fromSection: sectionId }));
           row.addEventListener('keydown', e => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -823,23 +843,30 @@
       answerBlock.appendChild(relSection);
     }
 
-    // Self Rating
-    const ratingSection = buildCardSection('rating-section q-section', buildRatingSectionHTML(q.id));
-    ratingSection.id = 'rating-section';
-    answerBlock.appendChild(ratingSection);
+    // Self Rating — omitted in Quick Scan so progress can't be touched
+    if (!state.quickScan) {
+      const ratingSection = buildCardSection('rating-section q-section', buildRatingSectionHTML(q.id));
+      ratingSection.id = 'rating-section';
+      answerBlock.appendChild(ratingSection);
+    }
 
     content.appendChild(answerBlock);
 
     // ── Wire up events ───────────────────────────────
     wireQuestionEvents(q);
 
-    // Restore existing rating if any
-    const existing = getRating(q.id);
-    if (existing) {
-      const ratingSection_ = content.querySelector('#rating-section');
-      const btn = ratingSection_?.querySelector(`[data-rating="${existing.rating}"]`);
-      if (btn) btn.classList.add('selected');
-      showPostRating(q.id, existing.rating);
+    if (state.quickScan) {
+      // No think/reveal gate — show the answer straight away.
+      revealAnswer(q);
+    } else {
+      // Restore existing rating if any
+      const existing = getRating(q.id);
+      if (existing) {
+        const ratingSection_ = content.querySelector('#rating-section');
+        const btn = ratingSection_?.querySelector(`[data-rating="${existing.rating}"]`);
+        if (btn) btn.classList.add('selected');
+        showPostRating(q.id, existing.rating);
+      }
     }
   }
 
@@ -1773,6 +1800,11 @@
     DOM.settings.themeOpts.forEach(opt => {
       opt.addEventListener('click', () => applyTheme(opt.dataset.themeValue));
     });
+
+    // Quick Scan toggle
+    if (DOM.settings.scanToggle) {
+      DOM.settings.scanToggle.addEventListener('click', () => applyQuickScan(!state.quickScan));
+    }
 
     // Data bank options (disabled banks — e.g. Java until it ships — no-op)
     DOM.settings.dataOpts.forEach(opt => {

@@ -2000,6 +2000,99 @@ body { padding-top: var(--nav-h); }
   letter-spacing: 0.5px;
 }
 
+/* ── Quick Scan toggle ──────────────────────────────────────── */
+.scan-toggle {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  padding: 16px;
+  background: var(--bg2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.scan-toggle:hover { border-color: var(--border2); }
+.scan-toggle[aria-checked="true"] {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.scan-toggle-icon { font-size: 24px; line-height: 1; }
+.scan-toggle-text { display: flex; flex-direction: column; gap: 2px; }
+.scan-toggle-name { font-weight: 700; color: var(--text); font-size: 15px; }
+.scan-toggle-sub { color: var(--text2); font-size: 13px; }
+.scan-switch {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--bg4);
+  position: relative;
+  transition: background 0.2s ease;
+}
+.scan-toggle[aria-checked="true"] .scan-switch { background: var(--primary); }
+.scan-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.scan-toggle[aria-checked="true"] .scan-switch-knob { transform: translateX(18px); }
+
+/* ── Quick Scan active indicator (ambient corner chip) ──────── */
+.scan-banner {
+  position: fixed;
+  top: calc(var(--nav-h) + 10px);
+  right: 14px;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, var(--bg2));
+  border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  pointer-events: none;   /* never intercept clicks */
+  opacity: 0.9;
+}
+.scan-banner[hidden] { display: none; }
+.scan-banner-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: scan-pulse 1.6s ease-in-out infinite;
+}
+@keyframes scan-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+@media (max-width: 480px) {
+  .scan-banner { top: 10px; right: 12px; }
+}
+
+/* ── Quick Scan: stripped-back chrome ───────────────────────── */
+/* Nav collapses to Home · Settings — Study/Mock/Progress are about the
+   rating/scoring loop that scan mode disables. */
+.quick-scan #nav-study,
+.quick-scan #nav-mock,
+.quick-scan #nav-progress { display: none; }
+/* Home drops its progress stats (frozen + irrelevant during a scan). */
+.quick-scan .stats-bar,
+.quick-scan .overall-progress-block { display: none; }
+
 /* ── Mobile: floating liquid-glass tab capsule (iOS-style) ──── */
 @media (max-width: 480px) {
   .app-nav {
