@@ -37,13 +37,63 @@ original architect answers.
 - Add the rest of the Java taxonomy, section-by-section. Each section is its own
   `questions/tech/java/<topic>.js` exposing `JAVA_<TOPIC>`, registered in
   `java_data.js`, validated by `tools/validate_tech.js`.
-- Locked taxonomy: Concurrency ✅ · Core Language & OOP · Collections & Generics ·
-  JVM & Memory · Exceptions & I/O · Streams & Functional · Spring
+- **Locked taxonomy — 10 sections, language & runtime only** (Spring is its own bank,
+  v1.3.0). Listed in frequency / build order for a very-senior / architect audience.
+  Target ≈ **120 questions** total (~12 done in Concurrency; ~108 to write), ~2–3 per
+  subsection. Per-section targets in (parens).
+
+  1. **Concurrency** ✅ (12 — done) — Threads & Lifecycle · Synchronization & Locks ·
+     Executors & Thread Pools · Concurrent Collections & Atomics · Memory Model & Visibility
+  2. **JVM & Memory** ← next build target (~15) — Class loading & linking · Memory areas
+     (heap/stack/metaspace) · Garbage collection (G1/ZGC) · GC tuning & monitoring ·
+     Memory leaks & OOM diagnosis · JIT compilation & performance
+  3. **Collections** (~12) — List/Set/Map implementations · HashMap internals
+     (hashing, resize, treeify) · Iteration & fail-fast (ConcurrentModification) ·
+     Ordering & sorting (Comparable/Comparator) · Choosing the right collection / performance
+  4. **Core Language & OOP** (~15) — OOP principles (encapsulation/inheritance/polymorphism/
+     abstraction) · Classes, interfaces & abstract classes · Object contracts
+     (equals/hashCode/Comparable/Comparator) · Generics (bounds, wildcards, erasure,
+     variance) · Enums · Access modifiers & immutability
+  5. **Modern Java / Language Evolution** (~9) — Version timeline & LTS milestones ·
+     New-feature deep-dives (records, sealed, pattern matching, var, text blocks, switch
+     expressions) · Deprecated & Legacy FAQ
+  6. **Streams & Functional** (~12) — Lambdas & functional interfaces · Stream API
+     (intermediate/terminal ops) · Collectors & grouping · Optional · Laziness, parallel
+     streams & pitfalls
+  7. **Exceptions & Error Handling** (~9) — Exception hierarchy (checked vs unchecked) ·
+     try/catch/finally & try-with-resources · Custom exceptions & best practices ·
+     Error-handling design / resilience
+  8. **Annotations & Reflection** (~8) — Built-in & meta-annotations · Custom annotations
+     & retention · Reflection API · Dynamic proxies (bridge to AOP/Spring)
+  9. **Standard Library / Utilities** (~10) — I/O & NIO (files, Path/Files, channels/
+     buffers) · Networking (sockets, HttpClient) · Serialization (& alternatives) ·
+     Date/Time (java.time) · Regex & text processing
+  10. **Data Structures & Algorithms** (~18) — Complexity & trade-off analysis (Big-O,
+      choosing the right structure) · Arrays & strings · Linked lists, stacks & queues ·
+      Trees & graphs · Sorting & searching · Dynamic programming & greedy · Hashing & sets.
+      Principal/architect lens (reasoning & trade-offs, not leetcode-grind); could spin out
+      to its own bank later.
+- **Standing rules:** (a) trap/obsolete questions stay in their home section, **tagged**
+  (`tricky`, `deprecated`) — never moved or duplicated; (b) such questions are phrased the
+  "old way" they're asked, and the answer must **name the trap / flag obsolescence** (via
+  `common_trap` + detailed answer), not just explain functionality; (c) hands-on coding asks
+  carry the `coding` tag — topic-coupled ones (singleton, LRU) stay in their home section,
+  standalone problems live in the DSA section; `level` marks screening-basic vs design-hard.
 - Slim render-what-exists schema (question + quick_answer required; detailed/code/
-  key_points/common_trap optional). Suggested next section: **Collections & Generics**.
+  key_points/common_trap optional). Next section to build: **JVM & Memory**.
 
 **2. Deepen 360 architect answers**
 - Raise depth/quality of the original 12 architect sections (carried from v1.1.0 scope).
+
+## Next-but-one — v1.3.0
+
+**Spring bank** (own bank, sibling to `architect` and `java` via the `DB` seam —
+`questions/tech/spring/`, registered as `BANKS.spring` in app.js). Kept separate from
+core Java: Java = language & runtime knowledge; Spring = framework on top, and
+interviews treat them as separate rounds. Spring Core and Spring Boot are distinct
+sections (DI/IoC/AOP/bean lifecycle vs. auto-config/starters/actuator/embedded server).
+- Planned sections: Spring Core · Spring Boot · Web (MVC/WebFlux) · Data
+  (JPA/transactions) · Security · Testing. Core + Boot land first.
 
 ## Later (Backlog)
 
@@ -51,6 +101,8 @@ _Versions assigned when each ships. Reserve 2.0.0 for a true redesign/breaking c
 
 - Python / React tech banks (after Java is fleshed out)
 - Search — find questions by text, tag, id
+- Tag-filter view — surface cross-cutting tags (`tricky`, `deprecated`, `coding`) as an
+  on-demand filter over existing questions. Tags render today but aren't filterable (app.js).
 - PWA / offline — installable, works without network
 - Export / share — export progress, share a single question
 - Spaced-repetition tuning — make the 1/3/7-day intervals configurable
