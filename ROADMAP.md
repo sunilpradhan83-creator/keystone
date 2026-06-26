@@ -95,6 +95,60 @@ sections (DI/IoC/AOP/bean lifecycle vs. auto-config/starters/actuator/embedded s
 - Planned sections: Spring Core · Spring Boot · Web (MVC/WebFlux) · Data
   (JPA/transactions) · Security · Testing. Core + Boot land first.
 
+## Interview Notebook — personalized knowledge base
+
+_New initiative. Version assigned when scheduled (interleaves with content work)._
+
+Turn every real interview into a compounding, personal knowledge base, and use it to
+feed the question bank. Generic prep teaches what a good answer looks like; this captures
+**your** answers, your gaps, and improves them over time. After 20–30 interviews this is
+a personal corpus worth far more than generic prep.
+
+**Loop**
+1. You drop interview **transcripts** (text) in a Google Drive path.
+2. Claude reads each, critiques your answer **critically** (no soft-pedalling), writes the
+   **better answer**, and surfaces new concepts.
+3. Output lands in a `notebook/` folder in this repo (plain Markdown — Obsidian-compatible
+   `[[wikilinks]]`, also git-versioned).
+4. Real questions get **promoted into the bank** (see rule below).
+5. **Weekly review** — Claude scans the week, flags recurring mistakes, lists concepts to drill.
+
+**Layout**
+```
+notebook/
+  README.md            ← index + processed-transcripts log (drives incremental mode)
+  WORKFLOW.md          ← the loop, bank rules, dedup-table format
+  config.json          ← { "promotion_mode": "gated" | "auto" }
+  interviews/          ← one file per interview; per-question critique + better answer
+  concepts/            ← one file per concept; grows/deepens across interviews
+  weekly/              ← weekly reviews
+```
+
+**Bank promotion rule** — provenance via an optional `asked_in` field:
+- Interview-sourced Q **always** carries `asked_in: [{company, date, ref}]` + an
+  `asked@<company>` tag.
+- **Exists in bank** → link only (append `asked_in` + tag; no duplicate).
+- **New** → add it, with `asked_in` + tag.
+- **Hand-authored prep Qs stay clean** — no `asked_in`. So the bank is filterable into
+  "really asked" vs "authored prep."
+- `validate_tech.js` learns `asked_in` is optional.
+
+**Dedup** — "same question, or a variant whose answer lands the same" is Claude's judgment,
+surfaced as a promote/link table for approval; deduped across the whole batch + existing bank.
+
+**Modes**
+- **Bulk pass** (one-time): process the whole backlog of transcripts end-to-end.
+- **Incremental** (ongoing): process only the new transcript; "new" = not in the
+  processed-transcripts log in `README.md`.
+
+**`promotion_mode` setting** — `gated` (default): show the promote/link table, approve, then
+write. `auto`: write notebook + bank in one pass, review the git diff after. Flip to `auto`
+when the tool matures.
+
+**First chunk** — scaffold the skeleton only (`README.md`, `WORKFLOW.md`, `config.json`,
+`interviews/_TEMPLATE.md`, `concepts/_TEMPLATE.md`). No `questions/` or validator changes
+until the first real transcript.
+
 ## Later (Backlog)
 
 _Versions assigned when each ships. Reserve 2.0.0 for a true redesign/breaking change._
